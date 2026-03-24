@@ -13,13 +13,14 @@ export const TransactionHeartbeat = () => {
 
     const isSuccess = state.status === 'success';
     const isFailed = state.status === 'failed';
+    const isPartial = state.status === 'partial';
 
     return (
         <div className="fixed bottom-4 right-4 z-50 w-80 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden font-sans transition-all duration-300 ease-in-out transform translate-y-0">
             <div className="p-4">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {isSuccess ? 'Transaction Complete' : isFailed ? 'Transaction Failed' : 'Bridging Assets...'}
+                        {isSuccess ? 'Transaction Complete' : isFailed ? 'Transaction Failed' : isPartial ? 'Partial Transfer' : 'Bridging Assets...'}
                     </h3>
                     <button
                         onClick={clearState}
@@ -37,7 +38,7 @@ export const TransactionHeartbeat = () => {
                     <div className="relative flex-1">
                         <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
-                                className={`h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'bg-blue-600'
+                                className={`h-full transition-all duration-500 ease-out ${isSuccess ? 'bg-green-500' : isFailed ? 'bg-red-500' : isPartial ? 'bg-yellow-500' : 'bg-blue-600'
                                     }`}
                                 style={{ width: `${state.progress}%` }}
                             />
@@ -60,7 +61,7 @@ export const TransactionHeartbeat = () => {
             </div>
 
             {/* status bar line at bottom */}
-            <div className={`h-1 w-full ${isSuccess ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'bg-blue-600 animate-pulse'
+            <div className={`h-1 w-full ${isSuccess ? 'bg-green-500' : isFailed ? 'bg-red-500' : isPartial ? 'bg-yellow-500 animate-pulse' : 'bg-blue-600 animate-pulse'
                 }`} />
         </div>
     );

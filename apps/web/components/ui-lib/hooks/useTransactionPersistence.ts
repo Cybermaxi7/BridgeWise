@@ -1,16 +1,72 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ssrLocalStorage } from '../utils/ssr';
 
+export type TransactionStatus = 'idle' | 'pending' | 'success' | 'failed' | 'partial';
+
+export interface PartialTransferInfo {
+  originalAmount: string;
+  completedAmount: string;
+  failedAmount: string;
+  completedPercentage: number;
+  failedSteps: string[];
+  succeededSteps: string[];
+}
+
 export interface TransactionState {
   id: string;
-  status: 'idle' | 'pending' | 'success' | 'failed';
+  status: TransactionStatus;
   progress: number; // 0 to 100
   step: string;
   txHash?: string;
   timestamp: number;
+  partialInfo?: PartialTransferInfo;
 }
 
 const STORAGE_KEY = 'bridgewise_tx_state';
+
+export const createPartialTransferInfo = (
+  originalAmount: string,
+  completedAmount: string,
+  failedSteps: string[],
+  succeededSteps: string[]
+): PartialTransferInfo => {
+  const original = parseFloat(originalAmount || '0');
+  const completed = parseFloat(completedAmount || '0');
+  const failed = original - completed;
+  
+  return {
+    originalAmount,
+    completedAmount,
+    failedAmount: failed.toString(),
+    completedPercentage: original > 0 ? (completed / original) * 100 : 0,
+    failedSteps,
+    succeededSteps,
+  };
+};
+
+export const updatePartialTransfer = (
+  prev: TransactionState,
+  newCompletedAmount: string,
+  step: string,
+  failed: boolean
+): PartialTransferInfo | undefined => {
+  if (!prev.partialInfo) {
+    return undefined;
+  }
+  
+  const original = parseFloat(prev.partialInfo.originalAmount);
+  const currentCompleted = parseFloat(prev.partialInfo.completedAmount);
+  const newCompleted = failed ? currentCompleted : currentCompleted + parseFloat(newCompletedAmount);
+  const failedSteps = failed ? [...prev.partialInfo.failedSteps, step] : prev.partialInfo.failedSteps;
+  const succeededSteps = !failed ? [...prev.partialInfo.succeededSteps, step] : prev.partialInfo.succeededSteps;
+  
+  return createPartialTransferInfo(
+    prev.partialInfo.originalAmount,
+    newCompleted.toString(),
+    failedSteps,
+    succeededSteps
+  );
+};
 
 export const useTransactionPersistence = () => {
   const [state, setState] = useState<TransactionState>({
@@ -54,7 +110,7 @@ export const useTransactionPersistence = () => {
   }, [state]);
 
   const updateState = useCallback((updates: Partial<TransactionState>) => {
-    setState((prev) => ({ ...prev, ...updates, timestamp: Date.now() }));
+    setState((prev: TransactionState) => ({ ...prev, ...updates, timestamp: Date.now() }));
   }, []);
 
   const clearState = useCallback(() => {
@@ -68,13 +124,45 @@ export const useTransactionPersistence = () => {
     ssrLocalStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const startTransaction = useCallback((id: string) => {
+  const startTransaction = useCallback((id: string, originalAmount?: string) => {
+    const partialInfo = originalAmount 
+      ? createPartialTransferInfo(originalAmount, '0', [], [])
+      : undefined;
     setState({
       id,
       status: 'pending',
       progress: 0,
       step: 'Initializing...',
       timestamp: Date.now(),
+      partialInfo,
+    });
+  }, []);
+
+  const markPartialSuccess = useCallback((completedAmount: string, step: string) => {
+    setState((prev: TransactionState) => {
+      if (!prev.partialInfo) return prev;
+      
+      const newPartialInfo = updatePartialTransfer(prev, completedAmount, step, false);
+      return {
+        ...prev,
+        status: 'partial',
+        partialInfo: newPartialInfo,
+        timestamp: Date.now(),
+      };
+    });
+  }, []);
+
+  const markPartialFailure = useCallback((step: string) => {
+    setState((prev: TransactionState) => {
+      if (!prev.partialInfo) return prev;
+      
+      const newPartialInfo = updatePartialTransfer(prev, '0', step, true);
+      return {
+        ...prev,
+        status: 'partial',
+        partialInfo: newPartialInfo,
+        timestamp: Date.now(),
+      };
     });
   }, []);
 
@@ -83,5 +171,7 @@ export const useTransactionPersistence = () => {
     updateState,
     clearState,
     startTransaction,
+    markPartialSuccess,
+    markPartialFailure,
   };
 };

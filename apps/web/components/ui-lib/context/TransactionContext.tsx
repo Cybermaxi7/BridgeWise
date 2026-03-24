@@ -4,13 +4,25 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { ssrLocalStorage } from '../utils/ssr';
 
+export type TransactionStatus = 'idle' | 'pending' | 'success' | 'failed' | 'partial';
+
+export interface PartialTransferInfo {
+  originalAmount: string;
+  completedAmount: string;
+  failedAmount: string;
+  completedPercentage: number;
+  failedSteps: string[];
+  succeededSteps: string[];
+}
+
 export interface TransactionState {
     id: string;
-    status: 'idle' | 'pending' | 'success' | 'failed';
+    status: TransactionStatus;
     progress: number;
     step: string;
     txHash?: string;
     timestamp: number;
+    partialInfo?: PartialTransferInfo;
 }
 
 interface TransactionContextType {

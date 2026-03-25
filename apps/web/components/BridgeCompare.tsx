@@ -118,6 +118,7 @@ export const BridgeCompare: React.FC<BridgeCompareProps> = (props) => {
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const [showRefreshIndicator, setShowRefreshIndicator] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [userHasSelected, setUserHasSelected] = useState(false);
 
   const {
     quotes,
@@ -144,6 +145,7 @@ export const BridgeCompare: React.FC<BridgeCompareProps> = (props) => {
   const handleQuoteSelect = (quoteId: string) => {
     if (isMounted) {
       setSelectedQuoteId(quoteId);
+      setUserHasSelected(true); // Mark that user has manually selected
       onQuoteSelect?.(quoteId);
     }
   };
@@ -155,6 +157,18 @@ export const BridgeCompare: React.FC<BridgeCompareProps> = (props) => {
 
   // Apply sorting to quotes
   const sortedQuotes = quotes.length > 0 ? sortQuotes(enhanceQuotesForSorting(quotes), sortBy) : quotes;
+
+  // Auto-select top-ranked route when quotes load or refresh
+  // Only auto-select if user hasn't manually chosen a route
+  useEffect(() => {
+    if (sortedQuotes.length > 0 && !userHasSelected && isMounted) {
+      const topRankedQuote = sortedQuotes[0];
+      if (topRankedQuote && topRankedQuote.id !== selectedQuoteId) {
+        setSelectedQuoteId(topRankedQuote.id);
+        onQuoteSelect?.(topRankedQuote.id);
+      }
+    }
+  }, [sortedQuotes, userHasSelected, isMounted, selectedQuoteId, onQuoteSelect]);
 
   // Format last refreshed time
   const getLastRefreshedText = () => {
@@ -223,7 +237,7 @@ export const BridgeCompare: React.FC<BridgeCompareProps> = (props) => {
       {/* Refreshing skeleton - Show when refreshing existing quotes */}
       {isRefreshing && quotes.length > 0 && (
         <div className="bridge-compare__refreshing-skeleton grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-50">
-          {quotes.map((quote) => (
+          {quotes.map((quote: Quote) => (
             <QuoteSkeleton key={`refresh-${quote.id}`} />
           ))}
         </div>

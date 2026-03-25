@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useIsMounted } from './ui-lib/utils/ssr';
 
 // Define all types locally
@@ -260,6 +260,7 @@ export const BridgeCompareSimple: React.FC<BridgeCompareProps> = (props) => {
   const [sortBy, setSortBy] = useState<SortOption>('recommended');
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userHasSelected, setUserHasSelected] = useState(false);
 
   // Mock quotes data
   const mockQuotes: Quote[] = [
@@ -357,9 +358,22 @@ export const BridgeCompareSimple: React.FC<BridgeCompareProps> = (props) => {
   const handleQuoteSelect = (quoteId: string) => {
     if (isMounted) {
       setSelectedQuoteId(quoteId);
+      setUserHasSelected(true); // Mark that user has manually selected
       onQuoteSelect?.(quoteId);
     }
   };
+
+  // Auto-select top-ranked route when quotes load or refresh
+  // Only auto-select if user hasn't manually chosen a route
+  useEffect(() => {
+    if (sortedQuotes.length > 0 && !userHasSelected && isMounted) {
+      const topRankedQuote = sortedQuotes[0];
+      if (topRankedQuote && topRankedQuote.id !== selectedQuoteId) {
+        setSelectedQuoteId(topRankedQuote.id);
+        onQuoteSelect?.(topRankedQuote.id);
+      }
+    }
+  }, [sortedQuotes, userHasSelected, isMounted, selectedQuoteId, onQuoteSelect]);
 
   // Handle sort change
   const handleSortChange = (newSortBy: SortOption) => {

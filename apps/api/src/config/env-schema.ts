@@ -176,6 +176,13 @@ export const ENV_SCHEMA: EnvironmentSchema = {
     description: 'Optimism RPC endpoint URL',
     example: 'https://mainnet.optimism.io',
   },
+  RPC_BASE: {
+    name: 'RPC_BASE',
+    type: 'url',
+    required: true,
+    description: 'Base RPC endpoint URL',
+    example: 'https://mainnet.base.org',
+  },
 
   // ========== CORS Configuration ==========
   CORS_ORIGIN: {

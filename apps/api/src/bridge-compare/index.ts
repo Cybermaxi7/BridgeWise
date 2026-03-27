@@ -14,6 +14,10 @@ export interface NormalizedQuote {
   slippagePercent: number;
   reliabilityScore: number; // 0-100
   compositeScore: number; // 0-100 (lower is better for cost, higher for balanced)
+  confidenceScore: number; // 0-100, derived from fees + slippage + success rate
+  confidenceLevel: 'high' | 'medium' | 'low'; // categorical label for confidenceScore
+  failureRisk: 'high' | 'medium' | 'low'; // predicted probability of route failure
+  riskFactors: string[]; // human-readable reasons driving the risk level
   rankingPosition: number;
   bridgeStatus: BridgeStatus;
   metadata: Record<string, unknown>;
@@ -77,6 +81,8 @@ export interface QuoteResponse {
   totalProviders: number;
   successfulProviders: number;
   fetchDurationMs: number;
+  cacheHit: boolean;
+  cachedAt?: Date;
 }
 
 export interface BridgeProvider {

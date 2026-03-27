@@ -3,6 +3,8 @@ import { AggregationService } from './aggregation.service';
 import { SlippageService } from './slippage.service';
 import { ReliabilityService } from './reliability.service';
 import { RankingService } from './ranking.service';
+import { FailureRiskService } from './failure-risk.service';
+import { QuoteCacheService } from './quote-cache.service';
 import { GetQuotesDto } from './dto';
 import {
   NormalizedQuote,
@@ -21,6 +23,8 @@ export class BridgeCompareService {
     private readonly slippageService: SlippageService,
     private readonly reliabilityService: ReliabilityService,
     private readonly rankingService: RankingService,
+    private readonly failureRiskService: FailureRiskService,
+    private readonly quoteCacheService: QuoteCacheService,
   ) {}
 
   /**
@@ -43,6 +47,13 @@ export class BridgeCompareService {
         `amount=${dto.amount} mode=${params.rankingMode}`,
     );
 
+    const cacheKey = this.quoteCacheService.buildKey(params);
+    const cached = this.quoteCacheService.get(cacheKey);
+    if (cached) {
+      this.logger.log(`Returning cached quotes for key: ${cacheKey}`);
+      return cached;
+    }
+
     const { quotes: rawQuotes, failedProviders } =
       await this.aggregationService.fetchRawQuotes(params);
 
@@ -56,9 +67,10 @@ export class BridgeCompareService {
     const bridgeIds = rawQuotes.map((q) => q.bridgeId);
     const reliabilityMap =
       this.reliabilityService.batchCalculateScores(bridgeIds);
+    const metricsMap = this.reliabilityService.batchGetMetrics(bridgeIds);
 
     const normalizedQuotes: NormalizedQuote[] = rawQuotes.map((raw) =>
-      this.normalizeQuote(raw, params, slippageMap, reliabilityMap),
+      this.normalizeQuote(raw, params, slippageMap, reliabilityMap, metricsMap),
     );
 
     const rankedQuotes = this.rankingService.rankQuotes(
@@ -81,7 +93,10 @@ export class BridgeCompareService {
       totalProviders: rawQuotes.length + failedProviders,
       successfulProviders: rawQuotes.length,
       fetchDurationMs: Date.now() - startTime,
+      cacheHit: false,
     };
+
+    this.quoteCacheService.set(cacheKey, { ...response, cacheHit: true, cachedAt: new Date() });
 
     this.logger.log(
       `Returned ${rankedQuotes.length} quotes in ${response.fetchDurationMs}ms. ` +
@@ -124,11 +139,21 @@ export class BridgeCompareService {
     params: QuoteRequestParams,
     slippageMap: Map<string, { expectedSlippage: number }>,
     reliabilityMap: Map<string, number>,
+    metricsMap: Map<string, import('./interfaces').ReliabilityMetrics>,
   ): NormalizedQuote {
     const totalFeeUsd = raw.feesUsd + raw.gasCostUsd;
     const slippage = slippageMap.get(raw.bridgeId);
+    const slippagePercent = slippage?.expectedSlippage ?? 0;
     const reliabilityScore = reliabilityMap.get(raw.bridgeId) ?? 70;
     const bridgeStatus = this.aggregationService.getBridgeStatus(raw.bridgeId);
+    const metrics = metricsMap.get(raw.bridgeId)!;
+
+    const { failureRisk, riskFactors } = this.failureRiskService.assessRisk(
+      reliabilityScore,
+      metrics,
+      slippagePercent,
+      bridgeStatus,
+    );
 
     return {
       bridgeId: raw.bridgeId,
@@ -141,9 +166,13 @@ export class BridgeCompareService {
       outputAmount: parseFloat(raw.outputAmount.toFixed(6)),
       totalFeeUsd: parseFloat(totalFeeUsd.toFixed(4)),
       estimatedTimeSeconds: raw.estimatedTimeSeconds,
-      slippagePercent: slippage?.expectedSlippage ?? 0,
+      slippagePercent,
       reliabilityScore,
       compositeScore: 0, // assigned by RankingService
+      confidenceScore: 0, // assigned by RankingService
+      confidenceLevel: 'low' as const, // assigned by RankingService
+      failureRisk,
+      riskFactors,
       rankingPosition: 0, // assigned by RankingService
       bridgeStatus,
       metadata: {

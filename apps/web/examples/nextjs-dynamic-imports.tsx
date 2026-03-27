@@ -1,37 +1,39 @@
 /**
  * Next.js Dynamic Import Examples for BridgeWise Components
- * 
+ *
  * These examples show how to properly import BridgeWise components
  * in Next.js applications to avoid SSR issues.
+ *
+ * For production use, prefer the canonical lazy exports:
+ *   import { LazyBridgeCompare, LazyBridgeStatus } from '../components/lazy';
  */
 
 import dynamic from 'next/dynamic';
 import { BridgeQuoteParams } from '@bridgewise/react';
+import { QuoteSkeleton } from '../components/ui-lib/skeleton/QuoteSkeleton';
+import { BridgeStatusSkeleton } from '../components/ui-lib/skeleton/BridgeStatusSkeleton';
 
 // Example 1: Dynamic import with SSR disabled (Recommended)
 export const BridgeCompareDynamic = dynamic(
   () => import('../components/BridgeCompare').then(mod => mod.BridgeCompare),
-  { 
-    ssr: false,
-    loading: () => <div>Loading Bridge Compare...</div>
-  }
-);
-
-// Example 2: Dynamic import with custom loading component
-export const BridgeCompareWithLoading = dynamic(
-  () => import('../components/BridgeCompare').then(mod => mod.BridgeCompare),
   {
     ssr: false,
     loading: () => (
-      <div className="animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-        <div className="space-y-2">
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <QuoteSkeleton />
+        <QuoteSkeleton />
+        <QuoteSkeleton />
       </div>
-    )
+    ),
+  }
+);
+
+// Example 2: BridgeStatus with skeleton fallback
+export const BridgeStatusDynamic = dynamic(
+  () => import('../components/BridgeStatus').then(mod => mod.BridgeStatus),
+  {
+    ssr: false,
+    loading: () => <BridgeStatusSkeleton />,
   }
 );
 

@@ -17,25 +17,16 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "lib": ["ES2021"],
-    "paths": {
-      "@bridgewise/bridge-core": ["packages/utils/src"],
-      "@bridgewise/bridge-core/*": ["packages/utils/src/*"],
-      "@bridgewise/ui-components": ["packages/ui/src"],
-      "@bridgewise/ui-components/*": ["packages/ui/src/*"]
-    }
+    "lib": ["ES2021"]
   },
-<<<<<<< HEAD
   "include": [
-    "src/**/*",
-    "libs/bridge-core/src/**/*",
-    "libs/bridge-core/*.ts"
+    "apps/**/*"
   ],
-=======
->>>>>>> 902330b94c4294029cf45eb84c6121443fbb0427
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
-    "**/*.e2e-spec.ts"
+    "**/*.e2e-spec.ts",
+    "apps/web/.next/**",
+    "apps/web/dist/**"
   ]
 }

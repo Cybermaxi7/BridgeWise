@@ -60,7 +60,10 @@ export class RouteOverrideService {
     return override;
   }
 
-  async update(id: string, dto: UpdateRouteOverrideDto): Promise<RouteOverride> {
+  async update(
+    id: string,
+    dto: UpdateRouteOverrideDto,
+  ): Promise<RouteOverride> {
     const override = await this.findOne(id);
     Object.assign(override, dto);
     const saved = await this.overrideRepo.save(override);

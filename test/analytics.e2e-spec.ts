@@ -86,7 +86,9 @@ describe('AnalyticsController (e2e)', () => {
 
   describe('GET /api/v1/bridge-analytics/trends/:bridge/:source/:dest', () => {
     it('should return time series data', () => {
-      const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const startDate = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
       const endDate = new Date().toISOString();
 
       return request(app.getHttpServer())
@@ -164,7 +166,9 @@ describe('AnalyticsController (e2e)', () => {
         .get('/api/v1/bridge-analytics/admin/recalculate')
         .expect(200)
         .expect((res) => {
-          expect(res.body.message).toBe('Analytics recalculation completed successfully');
+          expect(res.body.message).toBe(
+            'Analytics recalculation completed successfully',
+          );
         });
     });
   });

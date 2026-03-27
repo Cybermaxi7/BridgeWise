@@ -55,10 +55,18 @@ describe('FeeAggregationModule (e2e)', () => {
     it('should rank by cost when rankBy=cost', async () => {
       const response = await request(app.getHttpServer())
         .get('/quotes/compare')
-        .query({ fromChain: 1, toChain: 137, token: 'USDC', amount: '1000', rankBy: 'cost' })
+        .query({
+          fromChain: 1,
+          toChain: 137,
+          token: 'USDC',
+          amount: '1000',
+          rankBy: 'cost',
+        })
         .expect(200);
 
-      const supportedQuotes = response.body.quotes.filter((q: any) => q.supported);
+      const supportedQuotes = response.body.quotes.filter(
+        (q: any) => q.supported,
+      );
       if (supportedQuotes.length >= 2) {
         for (let i = 0; i < supportedQuotes.length - 1; i++) {
           expect(supportedQuotes[i].totalFeeUSD).toBeLessThanOrEqual(
@@ -71,10 +79,18 @@ describe('FeeAggregationModule (e2e)', () => {
     it('should rank by speed when rankBy=speed', async () => {
       const response = await request(app.getHttpServer())
         .get('/quotes/compare')
-        .query({ fromChain: 1, toChain: 137, token: 'USDC', amount: '1000', rankBy: 'speed' })
+        .query({
+          fromChain: 1,
+          toChain: 137,
+          token: 'USDC',
+          amount: '1000',
+          rankBy: 'speed',
+        })
         .expect(200);
 
-      const supportedQuotes = response.body.quotes.filter((q: any) => q.supported);
+      const supportedQuotes = response.body.quotes.filter(
+        (q: any) => q.supported,
+      );
       if (supportedQuotes.length >= 2) {
         for (let i = 0; i < supportedQuotes.length - 1; i++) {
           expect(supportedQuotes[i].estimatedArrivalTime).toBeLessThanOrEqual(
@@ -87,10 +103,18 @@ describe('FeeAggregationModule (e2e)', () => {
     it('should include score field when rankBy=score', async () => {
       const response = await request(app.getHttpServer())
         .get('/quotes/compare')
-        .query({ fromChain: 1, toChain: 137, token: 'USDC', amount: '1000', rankBy: 'score' })
+        .query({
+          fromChain: 1,
+          toChain: 137,
+          token: 'USDC',
+          amount: '1000',
+          rankBy: 'score',
+        })
         .expect(200);
 
-      const supportedQuotes = response.body.quotes.filter((q: any) => q.supported);
+      const supportedQuotes = response.body.quotes.filter(
+        (q: any) => q.supported,
+      );
       supportedQuotes.forEach((q: any) => {
         expect(q.score).toBeDefined();
         expect(q.score).toBeGreaterThanOrEqual(0);
@@ -115,7 +139,13 @@ describe('FeeAggregationModule (e2e)', () => {
     it('should return 400 for invalid rankBy value', async () => {
       await request(app.getHttpServer())
         .get('/quotes/compare')
-        .query({ fromChain: 1, toChain: 137, token: 'USDC', amount: '1000', rankBy: 'invalid' })
+        .query({
+          fromChain: 1,
+          toChain: 137,
+          token: 'USDC',
+          amount: '1000',
+          rankBy: 'invalid',
+        })
         .expect(400);
     });
 

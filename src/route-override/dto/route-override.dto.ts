@@ -13,7 +13,10 @@ import { Type } from 'class-transformer';
 import { OverrideType } from '../entities/route-override.entity';
 
 export class CreateRouteOverrideDto {
-  @ApiProperty({ description: 'Bridge provider ID to override', example: 'stargate' })
+  @ApiProperty({
+    description: 'Bridge provider ID to override',
+    example: 'stargate',
+  })
   @IsString()
   @IsNotEmpty()
   bridgeId: string;
@@ -53,13 +56,17 @@ export class CreateRouteOverrideDto {
   @Max(100)
   scoreAdjustment?: number;
 
-  @ApiPropertyOptional({ description: 'Human-readable reason for the override' })
+  @ApiPropertyOptional({
+    description: 'Human-readable reason for the override',
+  })
   @IsOptional()
   @IsString()
   reason?: string;
 }
 
-export class UpdateRouteOverrideDto extends PartialType(CreateRouteOverrideDto) {
+export class UpdateRouteOverrideDto extends PartialType(
+  CreateRouteOverrideDto,
+) {
   @ApiPropertyOptional({ description: 'Enable or disable this override' })
   @IsOptional()
   @IsBoolean()

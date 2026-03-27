@@ -30,9 +30,9 @@
     "./src/**/*.spec.ts",
     "./src/**/*.e2e-spec.ts",
     "../../packages/utils/src/**/__tests__/**",
-    "../../apps/**",
+    "../../apps/web/**",
     "../../examples/**",
-    "../../packages/**",
+    "../../packages/ui/**",
     "../../dist/**",
     "../../node_modules/**"
   ]

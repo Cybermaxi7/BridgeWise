@@ -24,6 +24,16 @@ export interface MultiWalletState {
   activeWalletIndex: number | null;
   activeAccount: WalletAccount | null;
   error: WalletError | null;
+  isRestoring: boolean;
+}
+
+export interface UseWalletConnectionsOptions {
+  adapters?: WalletAdapter[];
+  autoConnect?: boolean;
+  storageKey?: string;
+  onConnect?: (connection: WalletConnection, account: WalletAccount) => void;
+  onDisconnect?: (walletType: WalletType | string) => void;
+  onError?: (error: WalletError) => void;
 }
 
 /**
@@ -31,12 +41,14 @@ export interface MultiWalletState {
  */
 export interface UseWalletConnectionsReturn {
   wallets: WalletConnection[];
+  availableWallets: WalletAdapter[];
   connectWallet: (walletType: WalletType | string) => Promise<void>;
   disconnectWallet: (walletType: WalletType | string) => Promise<void>;
   switchAccount: (account: WalletAccount) => void;
   activeAccount: WalletAccount | null;
   activeWallet: WalletConnection | null;
   error: WalletError | null;
+  isRestoring: boolean;
 }
 
 /**

@@ -7,11 +7,13 @@
 export type {
   WalletAdapter,
   WalletAccount,
+  WalletConnection,
   TokenBalance,
   WalletError,
   WalletErrorCode,
   WalletEvent,
   WalletEventCallback,
+  MultiWalletState,
   WalletState,
   ChainId,
   NetworkType,
@@ -20,6 +22,9 @@ export type {
   WalletAdapterConfig,
   UseWalletReturn,
   UseWalletOptions,
+  UseWalletConnectionsOptions,
+  UseWalletConnectionsReturn,
+  UseActiveAccountReturn,
   WalletProviderProps,
   WalletContextValue,
   EVMProvider,
@@ -36,6 +41,7 @@ export { StellarAdapter } from './adapters/StellarAdapter';
 // Hooks and Provider
 export { useWallet } from './useWallet';
 export { WalletProvider, useWalletContext } from './WalletProvider';
-export { useWalletConnections, useActiveAccount } from './useWalletConnections';
+export { useWalletConnections } from './useWalletConnections';
+export { useActiveAccount } from './MultiWalletContext';
 export { MultiWalletProvider, useMultiWalletContext } from './MultiWalletProvider';
 export { WalletConnector } from './WalletConnector';

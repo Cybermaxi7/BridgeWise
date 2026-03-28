@@ -1,15 +1,26 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { useWalletConnections } from './useWalletConnections';
+import { MultiWalletContext } from './MultiWalletContext';
 import type {
   WalletProviderProps,
-  WalletConnection,
   UseWalletConnectionsReturn,
 } from './types';
 
-const MultiWalletContext = createContext<UseWalletConnectionsReturn | null>(null);
-
-export const MultiWalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
-  const walletConnections = useWalletConnections();
+export const MultiWalletProvider: React.FC<WalletProviderProps> = ({
+  children,
+  adapters,
+  autoConnect = true,
+  onConnect,
+  onDisconnect,
+  onError,
+}) => {
+  const walletConnections = useWalletConnections({
+    adapters,
+    autoConnect,
+    onConnect: (_connection, account) => onConnect?.(account),
+    onDisconnect,
+    onError,
+  });
 
   const value = useMemo(() => ({ ...walletConnections }), [walletConnections]);
 

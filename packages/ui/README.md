@@ -230,7 +230,14 @@ const { liquidity, refreshLiquidity } = useBridgeLiquidity({
 ### Integration examples
 
 - `BridgeCompare` prioritizes higher-liquidity routes and warns/disables low-liquidity options.
+- `BridgeCompare` shows gas estimate preview from route transaction metadata before execution.
 - `BridgeStatus` (`TransactionHeartbeat`) can show liquidity alerts via `state.liquidityAlert`.
+
+### Gas Estimation Preview
+- The route card reads `transactionData.gasEstimate` when providers return gas-unit estimates.
+- Set `gasEstimateApiBaseUrl` on `BridgeCompare` to fetch live gas estimates from the backend `GET /api/v1/fees/network` endpoint for supported providers.
+- When available, `metadata.feeBreakdown.networkFee` is shown alongside the gas preview.
+- Preview values update automatically whenever route quotes or the selected chains change.
 
 ### Fallback and errors
 
@@ -279,6 +286,7 @@ const { activeAccount, activeWallet } = useActiveAccount();
 ### Features
 - Connect/disconnect multiple wallets (EVM, Stellar, etc.)
 - Switch between accounts and maintain correct transaction context
+- Persist wallet sessions and automatically restore the last active wallet on load
 - SSR-safe and production-ready
 - Integrates with network switching, fee estimation, transaction history, and headless mode
 - UI demo component for wallet/account management
@@ -297,6 +305,12 @@ const { wallets, connectWallet, switchAccount, activeAccount } = useWalletConnec
 - Graceful handling of wallet disconnection
 - Structured errors for unsupported wallets
 - Ensures active account is always valid before executing transfers
+- Failed session restores are cleared automatically so stale wallets do not block the app
+
+### Auto-Reconnect Behavior
+- `MultiWalletProvider` restores previously connected wallets from local storage by default.
+- The last active wallet is restored first, and invalid sessions are removed automatically.
+- Set `autoConnect={false}` on `MultiWalletProvider` if you want to disable session restore.
 
 ### Testing
 - Unit tests cover connection, disconnection, account switching, and error handling

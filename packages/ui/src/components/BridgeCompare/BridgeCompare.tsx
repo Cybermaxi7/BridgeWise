@@ -1,26 +1,25 @@
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useFeeSlippageBenchmark } from '../../hooks/useFeeSlippageBenchmark';
 import { useBridgeLiquidity } from '../../hooks/useBridgeLiquidity';
 import { prioritizeRoutesByLiquidity } from '../../liquidity/monitor';
-import type { BridgeRoute, ChainId } from '../../../../bridge-core/src/types';
+import {
+  getGasEstimatePreview,
+  resolveGasEstimateNetwork,
+} from './gasPreview';
+import type { BridgeCompareRoute, RemoteGasEstimate } from './gasPreview';
 
 interface BridgeCompareProps {
-  routes: BridgeRoute[];
+  routes: BridgeCompareRoute[];
   token: string;
   sourceChain: string;
   destinationChain: string;
+  gasEstimateApiBaseUrl?: string;
   showBenchmarkComparison?: boolean;
   minLiquidityThreshold?: number;
-  onRouteSelect?: (route: BridgeRoute) => void;
+  onRouteSelect?: (route: BridgeCompareRoute) => void;
   className?: string;
   style?: React.CSSProperties;
-}
-
-// Define the types locally to avoid import issues
-interface ChainIdType {
-  sourceChain: string;
-  destinationChain: string;
 }
 
 const BridgeCompare: React.FC<BridgeCompareProps> = ({
@@ -28,6 +27,7 @@ const BridgeCompare: React.FC<BridgeCompareProps> = ({
   token,
   sourceChain,
   destinationChain,
+  gasEstimateApiBaseUrl,
   showBenchmarkComparison = true,
   minLiquidityThreshold = 0,
   onRouteSelect,
@@ -42,8 +42,8 @@ const BridgeCompare: React.FC<BridgeCompareProps> = ({
     averageBenchmark 
   } = useFeeSlippageBenchmark({
     token,
-    sourceChain: sourceChain as ChainId,
-    destinationChain: destinationChain as ChainId,
+    sourceChain,
+    destinationChain,
   });
 
   const {
@@ -60,6 +60,104 @@ const BridgeCompare: React.FC<BridgeCompareProps> = ({
   });
 
   const orderedRoutes = prioritizeRoutesByLiquidity(routes, liquidity);
+
+  const routeNetworks = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          routes
+            .map((route) => resolveGasEstimateNetwork(route.provider))
+            .filter((network): network is NonNullable<ReturnType<typeof resolveGasEstimateNetwork>> =>
+              network !== null,
+            ),
+        ),
+      ),
+    [routes],
+  );
+
+  const [remoteGasEstimates, setRemoteGasEstimates] = useState<
+    Partial<Record<NonNullable<ReturnType<typeof resolveGasEstimateNetwork>>, RemoteGasEstimate>>
+  >({});
+  const [gasEstimateLoading, setGasEstimateLoading] = useState(false);
+
+  useEffect(() => {
+    if (!gasEstimateApiBaseUrl || routeNetworks.length === 0) {
+      setRemoteGasEstimates({});
+      setGasEstimateLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchGasEstimates = async () => {
+      setGasEstimateLoading(true);
+
+      const apiBaseUrl = gasEstimateApiBaseUrl.replace(/\/$/, '');
+      const estimates = await Promise.all(
+        routeNetworks.map(async (network) => {
+          try {
+            const response = await fetch(
+              `${apiBaseUrl}/api/v1/fees/network?network=${encodeURIComponent(network)}`,
+            );
+
+            if (!response.ok) {
+              return null;
+            }
+
+            const payload = (await response.json()) as {
+              data?: {
+                available?: boolean;
+                fees?: { standard?: string };
+                currency?: string;
+              };
+            };
+            const data = payload.data;
+
+            if (!data?.available || !data.fees?.standard) {
+              return null;
+            }
+
+            return [
+              network,
+              {
+                network,
+                available: true,
+                standardFee: data.fees.standard,
+                currency: data.currency ?? null,
+              } satisfies RemoteGasEstimate,
+            ] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (isCancelled) {
+        return;
+      }
+
+      setRemoteGasEstimates(
+        estimates.reduce<
+          Partial<Record<NonNullable<ReturnType<typeof resolveGasEstimateNetwork>>, RemoteGasEstimate>>
+        >((accumulator, estimate) => {
+          if (!estimate) {
+            return accumulator;
+          }
+
+          const [network, remoteEstimate] = estimate;
+          accumulator[network] = remoteEstimate;
+          return accumulator;
+        }, {}),
+      );
+      setGasEstimateLoading(false);
+    };
+
+    void fetchGasEstimates();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [gasEstimateApiBaseUrl, routeNetworks]);
 
   const getLiquidityForProvider = (provider: string) =>
     liquidity.find((item) => item.bridgeName.toLowerCase() === provider.toLowerCase());
@@ -116,6 +214,11 @@ const BridgeCompare: React.FC<BridgeCompareProps> = ({
           const feeDiff = benchmark 
             ? getFeeDifference(route.feePercentage, benchmark.avgFee) 
             : null;
+          const gasEstimateNetwork = resolveGasEstimateNetwork(route.provider);
+          const gasPreview = getGasEstimatePreview(route, {
+            remoteEstimate: gasEstimateNetwork ? remoteGasEstimates[gasEstimateNetwork] : undefined,
+            isLoading: gasEstimateLoading && gasEstimateNetwork !== null,
+          });
           const routeLiquidity = getLiquidityForProvider(route.provider);
           const requiredAmount = parseFloat(route.inputAmount);
           const threshold = requiredAmount + minLiquidityThreshold;
@@ -156,7 +259,7 @@ const BridgeCompare: React.FC<BridgeCompareProps> = ({
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="mt-4 grid grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-700 md:grid-cols-4">
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Total Fee</p>
                   <p className="font-medium text-gray-900 dark:text-white">
@@ -182,6 +285,24 @@ const BridgeCompare: React.FC<BridgeCompareProps> = ({
                   <p className="font-medium text-gray-900 dark:text-white">
                     {((parseFloat(route.inputAmount) - parseFloat(route.minAmountOut)) / parseFloat(route.inputAmount) * 100).toFixed(4)}%
                   </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Estimated Gas</p>
+                  <p
+                    className={`font-medium ${
+                      gasPreview.hasEstimate
+                        ? 'text-gray-900 dark:text-white'
+                        : 'text-amber-600 dark:text-amber-400'
+                    }`}
+                  >
+                    {gasPreview.gasDisplayText}
+                  </p>
+                  {gasPreview.networkFeeDisplayText && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Network fee: {gasPreview.networkFeeDisplayText}
+                    </p>
+                  )}
                 </div>
               </div>
 

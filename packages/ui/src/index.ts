@@ -99,15 +99,22 @@ export {
   useWallet,
   WalletProvider,
   useWalletContext,
+  useWalletConnections,
+  useActiveAccount,
+  MultiWalletProvider,
+  useMultiWalletContext,
+  WalletConnector,
 } from './wallet';
 
 export type {
   WalletAdapter,
   WalletAccount,
+  WalletConnection,
   TokenBalance,
   WalletError,
   WalletErrorCode,
   WalletEvent,
+  MultiWalletState,
   WalletState,
   ChainId,
   NetworkType,
@@ -115,6 +122,9 @@ export type {
   WalletTransaction,
   UseWalletReturn,
   UseWalletOptions,
+  UseWalletConnectionsOptions,
+  UseWalletConnectionsReturn,
+  UseActiveAccountReturn,
   WalletProviderProps,
   WalletContextValue,
 } from './wallet';

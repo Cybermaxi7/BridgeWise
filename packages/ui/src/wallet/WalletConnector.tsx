@@ -4,18 +4,22 @@ import { useMultiWalletContext } from './MultiWalletProvider';
 export const WalletConnector: React.FC = () => {
   const {
     wallets,
+    availableWallets,
     connectWallet,
     disconnectWallet,
     switchAccount,
     activeAccount,
-    activeWallet,
     error,
+    isRestoring,
   } = useMultiWalletContext();
 
-  // Placeholder UI for demo
+  const connectedWalletIds = new Set(wallets.map((wallet) => wallet.wallet.id));
+  const connectableWallets = availableWallets.filter((wallet) => !connectedWalletIds.has(wallet.id));
+
   return (
     <div>
       <h3>Wallet Connections</h3>
+      {isRestoring && <div>Restoring previous wallet session...</div>}
       <ul>
         {wallets.map((w, i) => (
           <li key={w.walletType + i}>
@@ -32,8 +36,11 @@ export const WalletConnector: React.FC = () => {
           </li>
         ))}
       </ul>
-      <button onClick={() => connectWallet('metamask')}>Connect MetaMask</button>
-      <button onClick={() => connectWallet('stellar')}>Connect Stellar</button>
+      {connectableWallets.map((wallet) => (
+        <button key={wallet.id} onClick={() => void connectWallet(wallet.id)}>
+          Connect {wallet.name}
+        </button>
+      ))}
       <div>Active Account: {activeAccount ? activeAccount.address : 'None'}</div>
       {error && <div style={{ color: 'red' }}>Error: {error.message}</div>}
     </div>

@@ -269,7 +269,86 @@ Poll endpoint as fallback to Server-Sent Events for retrieving transaction statu
   "status": "in-progress",
   "currentStep": 1,
   "totalSteps": 3,
-  "updatedAt": "2026-01-29T10:00:10.000Z"
+  "updatedAt": "2026-01-29T10:00:10.000Z",
+}
+```
+
+---
+
+#### GET `/transactions/export/:format`
+
+Export transaction history in CSV or JSON format with optional filtering.
+
+**Parameters**:
+- `format` (path, required): Export format (`csv` or `json`)
+- `account` (query, optional): Filter by account address
+- `sourceChain` (query, optional): Filter by source chain
+- `destinationChain` (query, optional): Filter by destination chain
+- `bridgeName` (query, optional): Filter by bridge name
+- `status` (query, optional): Filter by status (pending, confirmed, failed)
+- `startDate` (query, optional): Start date (ISO 8601 format)
+- `endDate` (query, optional): End date (ISO 8601 format)
+
+**Example - Export all transactions as CSV**:
+```bash
+curl -o transactions.csv "http://localhost:3000/transactions/export/csv"
+```
+
+**Example - Export filtered transactions as JSON**:
+```bash
+curl -o transactions.json "http://localhost:3000/transactions/export/json?account=0x742d35Cc6634C0532925a3b844Bc328e8f94D5dC&sourceChain=ethereum&destinationChain=polygon"
+```
+
+**Example - Export transactions by date range**:
+```bash
+curl -o transactions.csv "http://localhost:3000/transactions/export/csv?startDate=2024-01-01T00:00:00.000Z&endDate=2024-12-31T23:59:59.999Z"
+```
+
+**CSV Response**: `200 OK`
+```
+ID,Type,Status,Source Chain,Destination Chain,Bridge Name,Amount,Fee,TX Hash,Created At,Completed At
+txn_550e8400e29b41d4a716446655440000,stellar-payment,completed,ethereum,polygon,hop,100,1.5,0xabc...,2024-01-15T10:00:00.000Z,2024-01-15T10:05:00.000Z
+txn_550e8400e29b41d4a716446655440001,layerzero-omnichain,confirmed,ethereum,arbitrum,stargate,500,2.3,0xdef...,2024-01-16T14:30:00.000Z,
+```
+
+**JSON Response**: `200 OK`
+```json
+[
+  {
+    "id": "txn_550e8400e29b41d4a716446655440000",
+    "type": "stellar-payment",
+    "status": "completed",
+    "sourceChain": "ethereum",
+    "destinationChain": "polygon",
+    "bridgeName": "hop",
+    "amount": 100,
+    "fee": 1.5,
+    "txHash": "0xabc...",
+    "createdAt": "2024-01-15T10:00:00.000Z",
+    "completedAt": "2024-01-15T10:05:00.000Z"
+  },
+  {
+    "id": "txn_550e8400e29b41d4a716446655440001",
+    "type": "layerzero-omnichain",
+    "status": "confirmed",
+    "sourceChain": "ethereum",
+    "destinationChain": "arbitrum",
+    "bridgeName": "stargate",
+    "amount": 500,
+    "fee": 2.3,
+    "txHash": "0xdef...",
+    "createdAt": "2024-01-16T14:30:00.000Z",
+    "completedAt": null
+  }
+]
+```
+
+**Error**: `400 Bad Request`
+```json
+{
+  "success": false,
+  "error": "Invalid export format or parameters",
+  "details": "Unsupported export format. Use 'csv' or 'json'"
 }
 ```
 

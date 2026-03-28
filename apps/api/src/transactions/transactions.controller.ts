@@ -7,6 +7,8 @@ import {
   Body,
   Sse,
   MessageEvent,
+  Res,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,19 +16,24 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
+import { Response } from 'express';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { ExportTransactionsDto, ExportFormat } from './dto/export-transactions.dto';
 import { TransactionsService } from './transactions.service';
+import { TransactionsExportService } from './transactions-export.service';
 
 @ApiTags('Transactions')
 @Controller('transactions')
 export class TransactionsController {
   constructor(
     private readonly transactionService: TransactionsService,
+    private readonly exportService: TransactionsExportService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -374,5 +381,102 @@ export class TransactionsController {
   })
   async pollTransaction(@Param('id') id: string) {
     return this.transactionService.findById(id);
+  }
+
+  @Get('export/:format')
+  @ApiOperation({
+    summary: 'Export transaction history',
+    description:
+      'Export transaction history in CSV or JSON format with optional filtering. Supports filtering by account, chain, bridge, status, and date range.',
+  })
+  @ApiQuery({
+    name: 'account',
+    required: false,
+    description: 'Filter by account address',
+    example: '0x742d35Cc6634C0532925a3b844Bc328e8f94D5dC',
+  })
+  @ApiQuery({
+    name: 'sourceChain',
+    required: false,
+    description: 'Filter by source chain',
+    example: 'ethereum',
+  })
+  @ApiQuery({
+    name: 'destinationChain',
+    required: false,
+    description: 'Filter by destination chain',
+    example: 'polygon',
+  })
+  @ApiQuery({
+    name: 'bridgeName',
+    required: false,
+    description: 'Filter by bridge name',
+    example: 'hop',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by status',
+    enum: ['pending', 'confirmed', 'failed'],
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'Start date (ISO 8601 format)',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'End date (ISO 8601 format)',
+    example: '2024-12-31T23:59:59.999Z',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Transaction history exported successfully',
+    content: {
+      'text/csv': {
+        schema: { type: 'string' },
+        example: 'ID,Type,Status,Source Chain,Destination Chain,Bridge Name,Amount,Fee,TX Hash,Created At,Completed At\ntxn_123,stellar-payment,completed,ethereum,polygon,hop,100,1.5,0xabc...,2024-01-15T10:00:00.000Z,2024-01-15T10:05:00.000Z',
+      },
+      'application/json': {
+        schema: { type: 'array', items: { type: 'object' } },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid export format or parameters',
+  })
+  async exportTransactions(
+    @Param('format') format: ExportFormat,
+    @Query() filters: ExportTransactionsDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.exportService.getTransactionsForExport(filters);
+
+    if (format === ExportFormat.CSV) {
+      const csvContent = this.exportService.convertToCSV(data);
+      res.setHeader(
+        'Content-Type',
+        'text/csv; charset=utf-8',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="transactions_${new Date().toISOString().split('T')[0]}.csv"`,
+      );
+      return res.send(csvContent);
+    } else {
+      const jsonContent = this.exportService.convertToJSON(data);
+      res.setHeader(
+        'Content-Type',
+        'application/json; charset=utf-8',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="transactions_${new Date().toISOString().split('T')[0]}.json"`,
+      );
+      return res.send(jsonContent);
+    }
   }
 }

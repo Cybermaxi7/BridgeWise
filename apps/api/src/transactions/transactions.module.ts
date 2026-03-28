@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
+import { TransactionsExportService } from './transactions-export.service';
 import { AuditLoggerService } from '../common/logger/audit-logger.service';
 
 @Module({
@@ -12,6 +13,6 @@ import { AuditLoggerService } from '../common/logger/audit-logger.service';
     EventEmitterModule.forRoot(),
   ],
   controllers: [TransactionsController],
-  providers: [TransactionsService, AuditLoggerService],
+  providers: [TransactionsService, TransactionsExportService, AuditLoggerService],
 })
 export class TransactionsModule {}

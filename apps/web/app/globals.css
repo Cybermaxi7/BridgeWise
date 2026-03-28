@@ -1,12 +1,17 @@
 /**
  * Import Tailwind CSS
  */
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/**
+ * Use ThemeProvider's data-theme attribute for dark utilities
+ */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 /**
  * Import BridgeWise UI Components theme variables
  */
-@import "@bridgewise/ui-components/styles/globals.css";
+@import '@bridgewise/ui-components/styles/globals.css';
 
 /**
  * Application-specific styles

@@ -18,6 +18,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## BridgeWise Theme Usage
+
+The web app uses `BridgeWiseProvider` in `app/layout.tsx` for global theming.
+
+- Light/dark mode is managed by the provider and persisted in local storage.
+- `ThemeScript` is injected in `<head>` to avoid flash of incorrect theme on load.
+- The page includes a `Toggle Theme` action that switches between light and dark mode.
+
+If you add new components, use Tailwind `dark:` utilities or BridgeWise CSS variables from `@bridgewise/ui-components/styles/globals.css` for consistent theming.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

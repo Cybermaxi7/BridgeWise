@@ -42,6 +42,18 @@ Welcome to the BridgeWise API documentation! This comprehensive guide covers eve
   - Debugging tips
   - ~400 lines
 
+- **[NETWORK_TIMEOUT_HANDLING.md](./NETWORK_TIMEOUT_HANDLING.md)** - TIMEOUT CONFIG
+  - Timeout enforcement configuration
+  - Retry integration
+  - Per-request timeout overrides
+  - Testing timeout scenarios
+
+- **[FALLBACK_BRIDGE_ROUTING.md](./FALLBACK_BRIDGE_ROUTING.md)** - FALLBACK ROUTING
+  - Automatic route switching on failure
+  - Duplicate execution prevention
+  - UI status updates
+  - Configuration options
+
 - **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - IMPLEMENTATION DETAILS
   - What was implemented
   - Acceptance criteria checklist

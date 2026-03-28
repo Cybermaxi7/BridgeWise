@@ -69,6 +69,21 @@ export type {
   BridgeExecutionRequest,
 } from './validator';
 
+// Fallback Route Executor
+export {
+  FallbackRouteExecutor,
+  FallbackExecutionError,
+  FallbackErrorCode,
+  createFallbackExecutor,
+} from './fallback-executor';
+export type {
+  FallbackExecutorConfig,
+  FallbackExecutionStatus,
+  FallbackStatusCallback,
+  ExecutionResult,
+  RouteExecutorFn,
+} from './fallback-executor';
+
 // Unified Adapter System
 export * from './unified-adapter';
 

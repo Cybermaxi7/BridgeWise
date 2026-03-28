@@ -1,7 +1,7 @@
 /**
  * useBridgeExecution Hook
  * Manages cross-chain bridge transaction execution with status tracking
- * Supports both Stellar and EVM transactions
+ * Supports both Stellar and EVM transactions with automatic fallback routing
  */
 
 'use client';
@@ -16,6 +16,28 @@ import type {
 } from '../components/BridgeStatus/types';
 
 /**
+ * Fallback route information for UI display
+ */
+export interface FallbackRouteInfo {
+  /** Original route that failed */
+  originalRoute: {
+    provider: BridgeProvider;
+    id: string;
+  };
+  /** Current fallback route being used */
+  fallbackRoute: {
+    provider: BridgeProvider;
+    id: string;
+  };
+  /** Number of fallback attempts made */
+  attemptNumber: number;
+  /** Total available fallback routes */
+  totalFallbacks: number;
+  /** Reason for fallback */
+  reason: string;
+}
+
+/**
  * Configuration options for useBridgeExecution
  */
 export interface UseBridgeExecutionOptions {
@@ -28,13 +50,22 @@ export interface UseBridgeExecutionOptions {
   /** Estimated time for transaction completion in seconds */
   estimatedTimeSeconds?: number;
   /** Callback when status changes */
-  onStatusChange?: (status: BridgeTransactionStatus, details?: TransactionStatusDetails) => void;
+  onStatusChange?: (
+    status: BridgeTransactionStatus,
+    details?: TransactionStatusDetails,
+  ) => void;
   /** Callback when transaction is confirmed */
   onConfirmed?: (details: TransactionStatusDetails) => void;
   /** Callback when transaction fails */
   onFailed?: (error: TransactionError) => void;
   /** Whether to auto-start polling on mount */
   autoStart?: boolean;
+  /** Enable automatic fallback routing on failure (default: true) */
+  enableFallback?: boolean;
+  /** Maximum number of fallback attempts (default: 3) */
+  maxFallbackAttempts?: number;
+  /** Callback when fallback is triggered */
+  onFallback?: (info: FallbackRouteInfo) => void;
 }
 
 /**
@@ -66,7 +97,7 @@ export interface UseBridgeExecutionReturn {
     amount?: number,
     token?: string,
     fee?: number,
-    slippagePercent?: number
+    slippagePercent?: number,
   ) => void;
   /** Stop transaction monitoring */
   stop: () => void;
@@ -80,6 +111,24 @@ export interface UseBridgeExecutionReturn {
   isConfirmed: boolean;
   /** Whether transaction failed */
   isFailed: boolean;
+  /** Fallback route information (if fallback is active) */
+  fallbackInfo: FallbackRouteInfo | null;
+  /** Whether a fallback is currently in progress */
+  isFallbackActive: boolean;
+  /** Number of fallback attempts made */
+  fallbackAttempts: number;
+  /** Start transaction monitoring with fallback routes */
+  startWithFallback: (
+    txHash: string,
+    provider: BridgeProvider,
+    sourceChain: ChainId,
+    destinationChain: ChainId,
+    fallbackRoutes: Array<{ provider: BridgeProvider; id: string }>,
+    amount?: number,
+    token?: string,
+    fee?: number,
+    slippagePercent?: number,
+  ) => void;
 }
 
 // Default configuration
@@ -87,6 +136,7 @@ const DEFAULT_POLL_INTERVAL_MS = 3000;
 const DEFAULT_MAX_POLL_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 const DEFAULT_REQUIRED_CONFIRMATIONS = 12;
 const DEFAULT_ESTIMATED_TIME_SECONDS = 180; // 3 minutes
+const DEFAULT_MAX_FALLBACK_ATTEMPTS = 3;
 
 // Chain-specific confirmation requirements
 const CHAIN_CONFIRMATIONS: Record<string, number> = {
@@ -136,7 +186,7 @@ const checkTransactionStatus = async (
   // 4. Return actual status
 
   const random = Math.random();
-  
+
   // Simulate progressive status
   if (random < 0.1) {
     return {
@@ -170,7 +220,9 @@ const checkTransactionStatus = async (
     return {
       status: 'confirmed',
       progress: 100,
-      confirmations: CHAIN_CONFIRMATIONS[destinationChain.toLowerCase()] || DEFAULT_REQUIRED_CONFIRMATIONS,
+      confirmations:
+        CHAIN_CONFIRMATIONS[destinationChain.toLowerCase()] ||
+        DEFAULT_REQUIRED_CONFIRMATIONS,
       step: 'Transaction complete',
     };
   } else {
@@ -186,7 +238,7 @@ const checkTransactionStatus = async (
 
 /**
  * Hook for managing bridge transaction execution
- * 
+ *
  * @example
  * ```tsx
  * const {
@@ -199,13 +251,13 @@ const checkTransactionStatus = async (
  *   onStatusChange: (status) => console.log('Status:', status),
  *   onConfirmed: (details) => console.log('Confirmed:', details),
  * });
- * 
+ *
  * // Start monitoring a transaction
  * start('0x123...', 'hop', 'ethereum', 'polygon');
  * ```
  */
 export function useBridgeExecution(
-  options: UseBridgeExecutionOptions = {}
+  options: UseBridgeExecutionOptions = {},
 ): UseBridgeExecutionReturn {
   const {
     pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
@@ -216,6 +268,9 @@ export function useBridgeExecution(
     onConfirmed,
     onFailed,
     autoStart = false,
+    enableFallback = true,
+    maxFallbackAttempts = DEFAULT_MAX_FALLBACK_ATTEMPTS,
+    onFallback,
   } = options;
 
   // State
@@ -224,11 +279,18 @@ export function useBridgeExecution(
   const [step, setStep] = useState('Initializing...');
   const [error, setError] = useState<TransactionError | null>(null);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(
-    userEstimatedTime || DEFAULT_ESTIMATED_TIME_SECONDS
+    userEstimatedTime || DEFAULT_ESTIMATED_TIME_SECONDS,
   );
   const [confirmations, setConfirmations] = useState(0);
   const [isPolling, setIsPolling] = useState(false);
   const [details, setDetails] = useState<TransactionStatusDetails | null>(null);
+
+  // Fallback state
+  const [fallbackInfo, setFallbackInfo] = useState<FallbackRouteInfo | null>(
+    null,
+  );
+  const [isFallbackActive, setIsFallbackActive] = useState(false);
+  const [fallbackAttempts, setFallbackAttempts] = useState(0);
 
   // Refs for managing polling
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -244,10 +306,20 @@ export function useBridgeExecution(
     slippagePercent?: number;
   } | null>(null);
 
+  // Fallback routes ref (stores alternative routes for fallback)
+  const fallbackRoutesRef = useRef<
+    Array<{ provider: BridgeProvider; id: string }>
+  >([]);
+  const originalRouteRef = useRef<{
+    provider: BridgeProvider;
+    id: string;
+  } | null>(null);
+
   const requiredConfirmations =
     userConfirmations ||
     (txInfoRef.current?.destinationChain
-      ? CHAIN_CONFIRMATIONS[txInfoRef.current.destinationChain.toLowerCase()] || DEFAULT_REQUIRED_CONFIRMATIONS
+      ? CHAIN_CONFIRMATIONS[txInfoRef.current.destinationChain.toLowerCase()] ||
+        DEFAULT_REQUIRED_CONFIRMATIONS
       : DEFAULT_REQUIRED_CONFIRMATIONS);
 
   // Computed states
@@ -267,8 +339,16 @@ export function useBridgeExecution(
   // Create transaction details object
   const createDetails = useCallback((): TransactionStatusDetails | null => {
     if (!txInfoRef.current) return null;
-    const { txHash, provider, sourceChain, destinationChain, amount, token, fee, slippagePercent } =
-      txInfoRef.current;
+    const {
+      txHash,
+      provider,
+      sourceChain,
+      destinationChain,
+      amount,
+      token,
+      fee,
+      slippagePercent,
+    } = txInfoRef.current;
     return {
       txHash,
       status,
@@ -285,48 +365,125 @@ export function useBridgeExecution(
       requiredConfirmations,
       timestamp: Date.now(),
     };
-  }, [status, progress, estimatedTimeRemaining, confirmations, requiredConfirmations]);
+  }, [
+    status,
+    progress,
+    estimatedTimeRemaining,
+    confirmations,
+    requiredConfirmations,
+  ]);
+
+  // Trigger fallback to next available route
+  const triggerFallback = useCallback(
+    (reason: string): boolean => {
+      if (!enableFallback) return false;
+      if (fallbackAttempts >= maxFallbackAttempts) return false;
+      if (fallbackRoutesRef.current.length === 0) return false;
+
+      const nextRoute = fallbackRoutesRef.current.shift();
+      if (!nextRoute || !txInfoRef.current || !originalRouteRef.current)
+        return false;
+
+      const newAttempt = fallbackAttempts + 1;
+      setFallbackAttempts(newAttempt);
+      setIsFallbackActive(true);
+
+      const info: FallbackRouteInfo = {
+        originalRoute: originalRouteRef.current,
+        fallbackRoute: nextRoute,
+        attemptNumber: newAttempt,
+        totalFallbacks: fallbackRoutesRef.current.length + 1,
+        reason,
+      };
+
+      setFallbackInfo(info);
+      setStep(`Switching to fallback route (${nextRoute.provider})...`);
+      setProgress(5);
+      setStatus('pending');
+      setError(null);
+
+      // Update the current provider to the fallback
+      txInfoRef.current = {
+        ...txInfoRef.current,
+        provider: nextRoute.provider,
+      };
+
+      // Notify callback
+      onFallback?.(info);
+
+      // Restart polling with new provider
+      pollStartTimeRef.current = Date.now();
+
+      return true;
+    },
+    [enableFallback, fallbackAttempts, maxFallbackAttempts, onFallback],
+  );
 
   // Update status with callbacks
   const updateStatus = useCallback(
-    (newStatus: BridgeTransactionStatus, newDetails?: TransactionStatusDetails) => {
+    (
+      newStatus: BridgeTransactionStatus,
+      newDetails?: TransactionStatusDetails,
+    ) => {
       setStatus(newStatus);
       const detailsToSend = newDetails || createDetails();
-      
+
       if (detailsToSend) {
         setDetails(detailsToSend);
         onStatusChange?.(newStatus, detailsToSend);
 
         if (newStatus === 'confirmed') {
+          setIsFallbackActive(false);
           onConfirmed?.(detailsToSend);
         } else if (newStatus === 'failed') {
-          const txError: TransactionError = {
-            code: 'TRANSACTION_FAILED',
-            message: 'Transaction failed during execution',
-            txHash: detailsToSend.txHash,
-            recoverable: true,
-            suggestedAction: 'retry',
-          };
-          setError(txError);
-          onFailed?.(txError);
+          // Attempt fallback before reporting failure
+          const fallbackTriggered = triggerFallback(
+            `Route ${detailsToSend.bridgeName} failed`,
+          );
+
+          if (!fallbackTriggered) {
+            // No fallback available, report actual failure
+            setIsFallbackActive(false);
+            const txError: TransactionError = {
+              code: 'TRANSACTION_FAILED',
+              message:
+                fallbackAttempts > 0
+                  ? `Transaction failed after ${fallbackAttempts} fallback attempts`
+                  : 'Transaction failed during execution',
+              txHash: detailsToSend.txHash,
+              recoverable: true,
+              suggestedAction: 'retry',
+            };
+            setError(txError);
+            onFailed?.(txError);
+          }
         }
       }
     },
-    [createDetails, onStatusChange, onConfirmed, onFailed]
+    [
+      createDetails,
+      onStatusChange,
+      onConfirmed,
+      onFailed,
+      triggerFallback,
+      fallbackAttempts,
+    ],
   );
 
   // Poll for transaction status
   const pollStatus = useCallback(async () => {
     if (!txInfoRef.current) return;
 
-    const { txHash, provider, sourceChain, destinationChain } = txInfoRef.current;
+    const { txHash, provider, sourceChain, destinationChain } =
+      txInfoRef.current;
 
     // Check for timeout
     if (Date.now() - pollStartTimeRef.current > maxPollDurationMs) {
       clearPolling();
       const timeoutError: TransactionError = {
         code: 'POLLING_TIMEOUT',
-        message: 'Transaction monitoring timed out. Please check explorer for status.',
+        message:
+          'Transaction monitoring timed out. Please check explorer for status.',
         txHash,
         recoverable: false,
         suggestedAction: 'contact_support',
@@ -338,7 +495,12 @@ export function useBridgeExecution(
     }
 
     try {
-      const result = await checkTransactionStatus(txHash, provider, sourceChain, destinationChain);
+      const result = await checkTransactionStatus(
+        txHash,
+        provider,
+        sourceChain,
+        destinationChain,
+      );
 
       setProgress(result.progress);
       setStep(result.step);
@@ -348,7 +510,10 @@ export function useBridgeExecution(
       setEstimatedTimeRemaining((prev) => {
         if (result.status === 'confirmed') return 0;
         const elapsed = (Date.now() - pollStartTimeRef.current) / 1000;
-        const total = userEstimatedTime || CHAIN_ESTIMATED_TIMES[destinationChain.toLowerCase()] || DEFAULT_ESTIMATED_TIME_SECONDS;
+        const total =
+          userEstimatedTime ||
+          CHAIN_ESTIMATED_TIMES[destinationChain.toLowerCase()] ||
+          DEFAULT_ESTIMATED_TIME_SECONDS;
         return Math.max(0, Math.round(total - elapsed));
       });
 
@@ -383,7 +548,7 @@ export function useBridgeExecution(
       amount: number = 0,
       token?: string,
       fee?: number,
-      slippagePercent?: number
+      slippagePercent?: number,
     ) => {
       // Reset state
       setStatus('pending');
@@ -392,7 +557,9 @@ export function useBridgeExecution(
       setError(null);
       setConfirmations(0);
       setEstimatedTimeRemaining(
-        userEstimatedTime || CHAIN_ESTIMATED_TIMES[destinationChain.toLowerCase()] || DEFAULT_ESTIMATED_TIME_SECONDS
+        userEstimatedTime ||
+          CHAIN_ESTIMATED_TIMES[destinationChain.toLowerCase()] ||
+          DEFAULT_ESTIMATED_TIME_SECONDS,
       );
 
       // Store transaction info
@@ -419,20 +586,81 @@ export function useBridgeExecution(
         void pollStatus();
       }, pollIntervalMs);
     },
-    [pollIntervalMs, userEstimatedTime, pollStatus]
+    [pollIntervalMs, userEstimatedTime, pollStatus],
+  );
+
+  /**
+   * Start monitoring with fallback routes
+   * @param fallbackRoutes - Alternative routes to try on failure
+   */
+  const startWithFallback = useCallback(
+    (
+      txHash: string,
+      provider: BridgeProvider,
+      sourceChain: ChainId,
+      destinationChain: ChainId,
+      fallbackRoutes: Array<{ provider: BridgeProvider; id: string }>,
+      amount: number = 0,
+      token?: string,
+      fee?: number,
+      slippagePercent?: number,
+    ) => {
+      // Store original route and fallbacks
+      originalRouteRef.current = { provider, id: txHash };
+      fallbackRoutesRef.current = [...fallbackRoutes];
+      setFallbackAttempts(0);
+      setFallbackInfo(null);
+      setIsFallbackActive(false);
+
+      // Start with primary route
+      start(
+        txHash,
+        provider,
+        sourceChain,
+        destinationChain,
+        amount,
+        token,
+        fee,
+        slippagePercent,
+      );
+    },
+    [start],
   );
 
   // Stop monitoring
   const stop = useCallback(() => {
     clearPolling();
+    setIsFallbackActive(false);
   }, [clearPolling]);
 
   // Retry failed transaction
   const retry = useCallback(() => {
+    // Reset fallback state on manual retry
+    setFallbackAttempts(0);
+    setFallbackInfo(null);
+    setIsFallbackActive(false);
+
     if (txInfoRef.current) {
-      const { txHash, provider, sourceChain, destinationChain, amount, token, fee, slippagePercent } =
-        txInfoRef.current;
-      start(txHash, provider, sourceChain, destinationChain, amount, token, fee, slippagePercent);
+      const {
+        txHash,
+        provider,
+        sourceChain,
+        destinationChain,
+        amount,
+        token,
+        fee,
+        slippagePercent,
+      } = txInfoRef.current;
+      start(
+        txHash,
+        provider,
+        sourceChain,
+        destinationChain,
+        amount,
+        token,
+        fee,
+        slippagePercent,
+      );
     }
   }, [start]);
 
@@ -453,12 +681,16 @@ export function useBridgeExecution(
     requiredConfirmations,
     isPolling,
     start,
+    startWithFallback,
     stop,
     retry,
     details,
     isPending,
     isConfirmed,
     isFailed,
+    fallbackInfo,
+    isFallbackActive,
+    fallbackAttempts,
   };
 }
 

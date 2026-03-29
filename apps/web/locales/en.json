@@ -1,0 +1,21 @@
+{
+  "app": {
+    "title": "BridgeWise Theming Demo",
+    "description": "This page demonstrates the BridgeWise theme system. The heartbeat and status components are styled via CSS variables injected by BridgeWiseProvider, with a custom primary color and dark background.",
+    "startTransaction": "Start Transaction",
+    "clearState": "Clear State",
+    "inlineStatusTitle": "Inline BridgeStatus",
+    "inlineStatusText": "An inline status card using the same theme variables as the floating heartbeat.",
+    "componentOverridesTitle": "Component-level Overrides",
+    "componentOverridesText": "The floating heartbeat below uses a custom className to adjust its position while still inheriting all theme variables.",
+    "componentOverridesHint": "Trigger a transaction and you'll see the heartbeat appear in the bottom-left corner.",
+    "statusConfirming": "Confirming on source chain...",
+    "statusBridging": "Bridging assets...",
+    "statusFinalizing": "Finalizing on destination...",
+    "offline": "You are offline. Showing {{cached}}.",
+    "offlineCached": "cached data from {{when}}",
+    "offlineLimited": "limited functionality",
+    "language": "Language",
+    "loading": "Loading..."
+  }
+}

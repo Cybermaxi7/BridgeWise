@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useOfflineDetection } from '../hooks/useOfflineDetection';
 
 export function OfflineBanner() {
+  const { t } = useTranslation();
   const { isOffline, cache } = useOfflineDetection();
 
   if (!isOffline) return null;
@@ -33,8 +35,9 @@ export function OfflineBanner() {
         />
       </svg>
       <span>
-        You are offline. Showing{' '}
-        {cachedAt ? `cached data from ${cachedAt}` : 'limited functionality'}.
+        {t('app.offline', {
+          cached: cachedAt ? t('app.offlineCached', { when: cachedAt }) : t('app.offlineLimited'),
+        })}
       </span>
     </div>
   );

@@ -6,6 +6,7 @@ import {
   TransactionProvider,
 } from '@bridgewise/ui-components';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { I18nProvider } from '../components/I18nProvider';
 import './globals.css';
 
 const customTheme = {
@@ -47,12 +48,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <BridgeWiseProvider theme={customTheme} defaultMode="system">
-          <TransactionProvider>
-            <OfflineBanner />
-            {children}
-          </TransactionProvider>
-        </BridgeWiseProvider>
+        <I18nProvider>
+          <BridgeWiseProvider theme={customTheme} defaultMode="system">
+            <TransactionProvider>
+              <OfflineBanner />
+              {children}
+            </TransactionProvider>
+          </BridgeWiseProvider>
+        </I18nProvider>
       </body>
     </html>
   );

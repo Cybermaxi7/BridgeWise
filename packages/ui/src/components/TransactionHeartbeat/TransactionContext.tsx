@@ -38,6 +38,7 @@ interface TransactionContextType {
   clearState: () => void;
   startTransaction: (id: string, initialState?: Partial<TransactionState>) => void;
   recordBridgeTransaction: (transaction: Partial<BridgeTransaction>) => Promise<void>;
+  executeBatch: (items: BatchTransactionInput[]) => Promise<BatchExecutionResult>;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -78,6 +79,21 @@ const normalizeBridgeTransaction = (
     account: payload.account ?? 'unknown',
   };
 };
+
+export interface BatchTransactionInput extends Partial<BridgeTransaction> {
+  id: string;
+}
+
+export interface BatchExecutionResultItem {
+  id: string;
+  txHash: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface BatchExecutionResult {
+  results: BatchExecutionResultItem[];
+}
 
 export interface TransactionProviderProps {
   children: ReactNode;
@@ -179,6 +195,96 @@ export const TransactionProvider = ({
     });
   }, []);
 
+  const executeBatch = useCallback(
+    async (items: BatchTransactionInput[]): Promise<BatchExecutionResult> => {
+      const results: BatchExecutionResultItem[] = [];
+      const total = items.length;
+
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index];
+        const progress = Math.round(((index + 1) / total) * 100);
+
+        startTransaction(item.id, {
+          txHash: item.txHash,
+          bridgeName: item.bridgeName,
+          sourceChain: item.sourceChain,
+          destinationChain: item.destinationChain,
+          sourceToken: item.sourceToken,
+          destinationToken: item.destinationToken,
+          amount: item.amount,
+          fee: item.fee,
+          slippagePercent: item.slippagePercent,
+          account: item.account,
+          status: 'pending',
+          step: `Processing batch item ${index + 1}/${total}`,
+          progress,
+        });
+
+        try {
+          // Simulate delay for transaction processing; replace with real API call if available
+          await new Promise((resolve) => setTimeout(resolve, 250));
+
+          const normalized = normalizeBridgeTransaction({
+            ...item,
+            status: 'confirmed',
+            timestamp: new Date(),
+          });
+
+          await historyStorage.upsertTransaction(normalized);
+          onTransactionTracked?.(normalized);
+
+          results.push({
+            id: item.id,
+            txHash: normalized.txHash,
+            success: true,
+          });
+
+          updateState({
+            status: 'success',
+            step: `Batch item ${index + 1}/${total} confirmed`,
+            progress,
+            txHash: normalized.txHash,
+          });
+        } catch (error) {
+          const errMessage = error instanceof Error ? error.message : 'Unknown error';
+
+          const failedRecord = normalizeBridgeTransaction({
+            ...item,
+            status: 'failed',
+            timestamp: new Date(),
+          });
+
+          await historyStorage.upsertTransaction(failedRecord);
+          onTransactionTracked?.(failedRecord);
+
+          results.push({
+            id: item.id,
+            txHash: failedRecord.txHash,
+            success: false,
+            error: errMessage,
+          });
+
+          updateState({
+            status: 'failed',
+            step: `Batch item ${index + 1}/${total} failed: ${errMessage}`,
+            progress,
+            txHash: failedRecord.txHash,
+          });
+        }
+      }
+
+      setState((prev) => ({
+        ...prev,
+        status: results.every((x) => x.success) ? 'success' : 'failed',
+        step: `Batch completed: ${results.filter((x) => x.success).length}/${total} succeeded`,
+        progress: 100,
+      }));
+
+      return { results };
+    },
+    [historyStorage, onTransactionTracked, startTransaction, updateState],
+  );
+
   const recordBridgeTransaction = useCallback(
     async (transaction: Partial<BridgeTransaction>) => {
       const normalized = normalizeBridgeTransaction(transaction);
@@ -190,7 +296,14 @@ export const TransactionProvider = ({
 
   return (
     <TransactionContext.Provider
-      value={{ state, updateState, clearState, startTransaction, recordBridgeTransaction }}
+      value={{
+        state,
+        updateState,
+        clearState,
+        startTransaction,
+        recordBridgeTransaction,
+        executeBatch,
+      }}
     >
       {children}
     </TransactionContext.Provider>

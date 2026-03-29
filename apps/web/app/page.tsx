@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BridgeWiseProvider,
@@ -23,7 +23,9 @@ const customTheme = {
 };
 
 function TransactionDemo() {
-  const { state, updateState, startTransaction, clearState } = useTransaction();
+  const { t } = useTranslation();
+  const { state, updateState, startTransaction, clearState, executeBatch } = useTransaction();
+  const [batchResult, setBatchResult] = useState<{ id: string; txHash: string; success: boolean; error?: string; }[] | null>(null);
 
   // Simulate progress
   useEffect(() => {
@@ -77,7 +79,73 @@ function TransactionDemo() {
             >
               {t('app.clearState')}
             </button>
+            <button
+              onClick={async () => {
+                const result = await executeBatch([
+                  {
+                    id: `batch-${Date.now()}-1`,
+                    bridgeName: 'demo',
+                    sourceChain: 'ethereum',
+                    destinationChain: 'polygon',
+                    sourceToken: 'ETH',
+                    destinationToken: 'USDC',
+                    amount: 1.23,
+                    fee: 0.02,
+                    slippagePercent: 0.5,
+                    account: '0x000',
+                    txHash: `0x${Math.random().toString(16).slice(2)}1`,
+                  },
+                  {
+                    id: `batch-${Date.now()}-2`,
+                    bridgeName: 'demo',
+                    sourceChain: 'polygon',
+                    destinationChain: 'ethereum',
+                    sourceToken: 'USDC',
+                    destinationToken: 'ETH',
+                    amount: 10.5,
+                    fee: 0.1,
+                    slippagePercent: 0.5,
+                    account: '0x000',
+                    txHash: `0x${Math.random().toString(16).slice(2)}2`,
+                  },
+                  {
+                    id: `batch-${Date.now()}-3`,
+                    bridgeName: 'demo',
+                    sourceChain: 'avax',
+                    destinationChain: 'optimism',
+                    sourceToken: 'USDC',
+                    destinationToken: 'DAI',
+                    amount: 50,
+                    fee: 0.25,
+                    slippagePercent: 0.5,
+                    account: '0x000',
+                    txHash: `0x${Math.random().toString(16).slice(2)}3`,
+                  },
+                ]);
+                setBatchResult(result.results);
+              }}
+              className="px-6 py-3 rounded-lg text-sm font-medium border border-blue-300 text-blue-700 dark:border-blue-500 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 active:scale-95 transition"
+            >
+              Run Batch (3)
+            </button>
           </div>
+
+          {batchResult && (
+            <div className="w-full rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+              <h3 className="font-semibold mb-2">Batch result</h3>
+              <ul className="space-y-1">
+                {batchResult.map((item) => (
+                  <li key={item.id} className="flex justify-between">
+                    <span>{item.id}</span>
+                    <span>
+                      {item.success ? '✅ success' : '❌ failed'}
+                      {item.error ? `: ${item.error}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <section className="grid w-full gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 p-4 shadow-sm">

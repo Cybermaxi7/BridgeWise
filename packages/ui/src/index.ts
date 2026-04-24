@@ -129,6 +129,13 @@ export type {
   WalletContextValue,
 } from './wallet';
 
+// Address Validation
+export { validateEVMAddress, validateStellarAddress, validateAddress } from './address-validation';
+export type { ChainType, ValidationResult } from './address-validation';
+
+// Transaction Lock Manager
+export { TransactionLockManager, type TransactionLock, type LockOptions } from './transaction-lock-manager';
+
 // SSR Compatibility Utils
 export { isServer, isClient } from './ssr-utils/env';
 export { safeStorage } from './ssr-utils/safe-storage';
@@ -141,3 +148,7 @@ export { useIsomorphicLayoutEffect } from './ssr-hooks/useIsomorphicLayoutEffect
 // SSR Components
 export { ClientOnly } from './components/SSR/ClientOnly';
 export type { ClientOnlyProps } from './components/SSR/ClientOnly';
+
+// Internationalization
+export { translations } from './i18n';
+export type { TranslationKeys } from './i18n';

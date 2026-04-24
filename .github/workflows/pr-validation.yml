@@ -1,0 +1,149 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for package.json changes
+        id: changed-packages
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -E "package\.json$|pnpm-lock\.yaml$"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Lint check
+        run: pnpm run lint
+
+      - name: Type check
+        run: |
+          pnpm --filter @bridgewise/api run tsc --noEmit
+          pnpm --filter web run tsc --noEmit
+          pnpm --filter @bridgewise/ui-components run tsc --noEmit
+
+      - name: Run tests
+        run: pnpm run test
+
+      - name: Build API
+        run: pnpm --filter @bridgewise/api build
+
+      - name: Build Web
+        run: pnpm --filter web build
+
+      - name: Build UI Components
+        run: pnpm --filter @bridgewise/ui-components build
+
+      - name: Build Storybook
+        run: pnpm --filter @bridgewise/ui-components build-storybook
+
+      - name: Check for breaking changes
+        if: steps.changed-packages.outputs.changed == 'true'
+        run: |
+          echo "📦 Package dependencies changed - checking for potential breaking changes"
+          pnpm audit --audit-level moderate
+
+      - name: Security audit
+        run: pnpm audit --audit-level moderate
+
+      - name: Check for TODO comments
+        run: |
+          echo "🔍 Checking for TODO/FIXME comments..."
+          TODO_COUNT=$(grep -r "TODO\|FIXME" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" src/ apps/ packages/ | wc -l || true)
+          if [ "$TODO_COUNT" -gt 0 ]; then
+            echo "⚠️ Found $TODO_COUNT TODO/FIXME comments"
+            grep -r "TODO\|FIXME" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" src/ apps/ packages/ || true
+          else
+            echo "✅ No TODO/FIXME comments found"
+          fi
+
+      - name: Validate PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            if (!pr.body || pr.body.trim().length < 10) {
+              core.setFailed('PR description must be at least 10 characters long');
+              return;
+            }
+            
+            console.log('✅ PR description validation passed');
+
+  size-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check PR size
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | wc -l)
+          echo "📊 PR changes $CHANGED_FILES files"
+          
+          if [ "$CHANGED_FILES" -gt 50 ]; then
+            echo "⚠️ Large PR detected ($CHANGED_FILES files). Consider breaking into smaller PRs."
+          else
+            echo "✅ PR size is reasonable"
+          fi
+
+  performance-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bundle size check
+        run: |
+          echo "📦 Checking bundle sizes..."
+          pnpm --filter web build
+          
+          if [ -d "apps/web/.next" ]; then
+            BUNDLE_SIZE=$(du -sh apps/web/.next | cut -f1)
+            echo "Web bundle size: $BUNDLE_SIZE"
+          fi
+          
+          pnpm --filter @bridgewise/api build
+          
+          if [ -d "apps/api/dist" ]; then
+            API_SIZE=$(du -sh apps/api/dist | cut -f1)
+            echo "API build size: $API_SIZE"
+          fi

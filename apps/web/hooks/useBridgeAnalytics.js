@@ -116,9 +116,7 @@ function useBridgeAnalytics(options = {}) {
             if (err instanceof Error && err.name === 'AbortError') {
                 return;
             }
-            setError(err instanceof Error
-                ? err
-                : new Error('An unknown error occurred'));
+            setError(err instanceof Error ? err : new Error('An unknown error occurred'));
         }
         finally {
             setLoading(false);
@@ -234,9 +232,7 @@ function useTimeSeriesAnalytics(options) {
             if (err instanceof Error && err.name === 'AbortError') {
                 return;
             }
-            setError(err instanceof Error
-                ? err
-                : new Error('An unknown error occurred'));
+            setError(err instanceof Error ? err : new Error('An unknown error occurred'));
         }
         finally {
             setLoading(false);
@@ -293,9 +289,7 @@ function useTopPerformingBridges(options) {
             setData(result);
         }
         catch (err) {
-            setError(err instanceof Error
-                ? err
-                : new Error('An unknown error occurred'));
+            setError(err instanceof Error ? err : new Error('An unknown error occurred'));
         }
         finally {
             setLoading(false);
@@ -352,14 +346,17 @@ function useSlippageStatistics(options) {
             setData(result.message ? null : result);
         }
         catch (err) {
-            setError(err instanceof Error
-                ? err
-                : new Error('An unknown error occurred'));
+            setError(err instanceof Error ? err : new Error('An unknown error occurred'));
         }
         finally {
             setLoading(false);
         }
-    }, [options.bridgeName, options.sourceChain, options.destinationChain, options.token]);
+    }, [
+        options.bridgeName,
+        options.sourceChain,
+        options.destinationChain,
+        options.token,
+    ]);
     const refetch = (0, react_1.useCallback)(async () => {
         await fetchSlippageStats();
     }, [fetchSlippageStats]);

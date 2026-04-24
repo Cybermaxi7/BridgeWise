@@ -1,126 +1,169 @@
 "use strict";
-var __esDecorate = (this && this.__esDecorate) || function (ctor, descriptorIn, decorators, contextIn, initializers, extraInitializers) {
-    function accept(f) { if (f !== void 0 && typeof f !== "function") throw new TypeError("Function expected"); return f; }
-    var kind = contextIn.kind, key = kind === "getter" ? "get" : kind === "setter" ? "set" : "value";
-    var target = !descriptorIn && ctor ? contextIn["static"] ? ctor : ctor.prototype : null;
-    var descriptor = descriptorIn || (target ? Object.getOwnPropertyDescriptor(target, contextIn.name) : {});
-    var _, done = false;
-    for (var i = decorators.length - 1; i >= 0; i--) {
-        var context = {};
-        for (var p in contextIn) context[p] = p === "access" ? {} : contextIn[p];
-        for (var p in contextIn.access) context.access[p] = contextIn.access[p];
-        context.addInitializer = function (f) { if (done) throw new TypeError("Cannot add initializers after decoration has completed"); extraInitializers.push(accept(f || null)); };
-        var result = (0, decorators[i])(kind === "accessor" ? { get: descriptor.get, set: descriptor.set } : descriptor[key], context);
-        if (kind === "accessor") {
-            if (result === void 0) continue;
-            if (result === null || typeof result !== "object") throw new TypeError("Object expected");
-            if (_ = accept(result.get)) descriptor.get = _;
-            if (_ = accept(result.set)) descriptor.set = _;
-            if (_ = accept(result.init)) initializers.unshift(_);
-        }
-        else if (_ = accept(result)) {
-            if (kind === "field") initializers.unshift(_);
-            else descriptor[key] = _;
-        }
-    }
-    if (target) Object.defineProperty(target, contextIn.name, descriptor);
-    done = true;
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __runInitializers = (this && this.__runInitializers) || function (thisArg, initializers, value) {
-    var useValue = arguments.length > 2;
-    for (var i = 0; i < initializers.length; i++) {
-        value = useValue ? initializers[i].call(thisArg, value) : initializers[i].call(thisArg);
-    }
-    return useValue ? value : void 0;
-};
-var __setFunctionName = (this && this.__setFunctionName) || function (f, name, prefix) {
-    if (typeof name === "symbol") name = name.description ? "[".concat(name.description, "]") : "";
-    return Object.defineProperty(f, "name", { configurable: true, value: prefix ? "".concat(prefix, " ", name) : name });
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionRetryService = void 0;
 const common_1 = require("@nestjs/common");
+const transactions_service_1 = require("../transactions.service");
 const transaction_entity_1 = require("../entities/transaction.entity");
-let TransactionRetryService = (() => {
-    let _classDecorators = [(0, common_1.Injectable)()];
-    let _classDescriptor;
-    let _classExtraInitializers = [];
-    let _classThis;
-    var TransactionRetryService = _classThis = class {
-        constructor(transactionService) {
-            this.transactionService = transactionService;
-            this.retryLogs = [];
-            this.retryPolicy = {
-                maxRetries: 3,
-                backoffMs: 1000,
-                backoffStrategy: 'exponential',
-            };
+let TransactionRetryService = class TransactionRetryService {
+    constructor(transactionService) {
+        this.transactionService = transactionService;
+        this.retryLogs = [];
+        this.retryPolicy = {
+            maxRetries: 3,
+            backoffMs: 1000,
+            backoffStrategy: 'exponential',
+        };
+        this.retryStateListeners = new Map();
+    }
+    setPolicy(policy) {
+        this.retryPolicy = { ...this.retryPolicy, ...policy };
+    }
+    onRetryStateChange(transactionId, callback) {
+        this.retryStateListeners.set(transactionId, callback);
+    }
+    offRetryStateChange(transactionId) {
+        this.retryStateListeners.delete(transactionId);
+    }
+    notifyRetryStateChange(state) {
+        const callback = this.retryStateListeners.get(state.transactionId);
+        if (callback) {
+            callback(state);
         }
-        setPolicy(policy) {
-            this.retryPolicy = { ...this.retryPolicy, ...policy };
-        }
-        async retryTransaction(transaction) {
-            if (!this.isSafeToRetry(transaction))
-                return null;
-            let attempt = 0;
-            let lastError = '';
-            while (attempt < this.retryPolicy.maxRetries) {
-                try {
-                    // Custom retry logic: re-execute transaction
-                    const updated = await this.transactionService.update(transaction.id, {
-                        status: transaction_entity_1.TransactionStatus.IN_PROGRESS,
-                    });
-                    // Simulate execution (replace with actual execution logic)
-                    // If successful:
-                    return updated;
-                }
-                catch (err) {
-                    lastError = err.message || String(err);
-                    this.logRetryAttempt(transaction.id, attempt + 1, lastError);
-                    attempt++;
-                    await this.backoff(attempt);
-                }
-            }
-            // Mark as failed after max retries
-            await this.transactionService.markFailed(transaction.id, lastError);
+    }
+    async retryTransaction(transaction) {
+        if (!this.isSafeToRetry(transaction))
             return null;
-        }
-        isSafeToRetry(transaction) {
-            // Only retry if status is FAILED and not completed
-            return (transaction.status === transaction_entity_1.TransactionStatus.FAILED &&
-                !transaction.completedAt);
-        }
-        logRetryAttempt(transactionId, attempt, error) {
-            this.retryLogs.push({
-                transactionId,
-                attempt,
-                error,
-                timestamp: new Date(),
-            });
-            // TODO: Integrate with analytics collector
-        }
-        async backoff(attempt) {
-            let ms = this.retryPolicy.backoffMs;
-            if (this.retryPolicy.backoffStrategy === 'exponential') {
-                ms = ms * Math.pow(2, attempt - 1);
+        // Get current retry count or initialize to 0
+        const currentRetryCount = transaction.retryCount || 0;
+        const maxRetries = this.retryPolicy.maxRetries;
+        let attempt = currentRetryCount;
+        let lastError = '';
+        // Notify UI of retry start
+        this.notifyRetryStateChange({
+            transactionId: transaction.id,
+            isRetrying: true,
+            currentAttempt: attempt + 1,
+            maxAttempts: maxRetries,
+        });
+        while (attempt < maxRetries) {
+            try {
+                // Calculate backoff time
+                let backoffTime = 0;
+                if (attempt > 0) {
+                    backoffTime = this.calculateBackoff(attempt);
+                    // Notify UI of countdown
+                    this.notifyRetryStateChange({
+                        transactionId: transaction.id,
+                        isRetrying: true,
+                        currentAttempt: attempt + 1,
+                        maxAttempts: maxRetries,
+                        nextRetryIn: backoffTime,
+                    });
+                    await this.sleep(backoffTime);
+                }
+                // Update transaction status to IN_PROGRESS
+                const updated = await this.transactionService.update(transaction.id, {
+                    status: transaction_entity_1.TransactionStatus.IN_PROGRESS,
+                    retryCount: attempt + 1,
+                    maxRetries: maxRetries,
+                });
+                // Notify UI of retry attempt
+                this.notifyRetryStateChange({
+                    transactionId: transaction.id,
+                    isRetrying: true,
+                    currentAttempt: attempt + 1,
+                    maxAttempts: maxRetries,
+                });
+                // Simulate execution (replace with actual execution logic)
+                // If successful:
+                this.notifyRetryStateChange({
+                    transactionId: transaction.id,
+                    isRetrying: false,
+                    currentAttempt: attempt + 1,
+                    maxAttempts: maxRetries,
+                });
+                return updated;
             }
-            return new Promise((resolve) => setTimeout(resolve, ms));
+            catch (err) {
+                lastError = err.message || String(err);
+                this.logRetryAttempt(transaction.id, attempt + 1, lastError);
+                attempt++;
+                if (attempt < maxRetries) {
+                    // Notify UI of failed attempt
+                    this.notifyRetryStateChange({
+                        transactionId: transaction.id,
+                        isRetrying: true,
+                        currentAttempt: attempt,
+                        maxAttempts: maxRetries,
+                        error: lastError,
+                    });
+                }
+            }
         }
-        getRetryLogs(transactionId) {
-            if (!transactionId)
-                return this.retryLogs;
-            return this.retryLogs.filter((log) => log.transactionId === transactionId);
+        // Mark as failed after max retries
+        await this.transactionService.markFailed(transaction.id, lastError);
+        // Notify UI of final failure
+        this.notifyRetryStateChange({
+            transactionId: transaction.id,
+            isRetrying: false,
+            currentAttempt: attempt,
+            maxAttempts: maxRetries,
+            error: `Max retries (${maxRetries}) exceeded: ${lastError}`,
+        });
+        this.offRetryStateChange(transaction.id);
+        return null;
+    }
+    isSafeToRetry(transaction) {
+        // Only retry if status is FAILED and not completed
+        return (transaction.status === transaction_entity_1.TransactionStatus.FAILED &&
+            !transaction.completedAt);
+    }
+    calculateBackoff(attempt) {
+        let ms = this.retryPolicy.backoffMs;
+        if (this.retryPolicy.backoffStrategy === 'exponential') {
+            ms = ms * Math.pow(2, attempt - 1);
         }
-    };
-    __setFunctionName(_classThis, "TransactionRetryService");
-    (() => {
-        const _metadata = typeof Symbol === "function" && Symbol.metadata ? Object.create(null) : void 0;
-        __esDecorate(null, _classDescriptor = { value: _classThis }, _classDecorators, { kind: "class", name: _classThis.name, metadata: _metadata }, null, _classExtraInitializers);
-        TransactionRetryService = _classThis = _classDescriptor.value;
-        if (_metadata) Object.defineProperty(_classThis, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
-        __runInitializers(_classThis, _classExtraInitializers);
-    })();
-    return TransactionRetryService = _classThis;
-})();
+        // Cap backoff at 30 seconds
+        return Math.min(ms, 30000);
+    }
+    sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    logRetryAttempt(transactionId, attempt, error) {
+        this.retryLogs.push({
+            transactionId,
+            attempt,
+            error,
+            timestamp: new Date(),
+        });
+        // TODO: Integrate with analytics collector
+    }
+    getRetryLogs(transactionId) {
+        if (!transactionId)
+            return this.retryLogs;
+        return this.retryLogs.filter((log) => log.transactionId === transactionId);
+    }
+    getRetryState(transaction) {
+        return {
+            retryCount: transaction.retryCount || 0,
+            maxRetries: transaction.maxRetries || this.retryPolicy.maxRetries,
+            attempts: transaction.retryAttempts || [],
+            error: transaction.error,
+        };
+    }
+};
 exports.TransactionRetryService = TransactionRetryService;
+exports.TransactionRetryService = TransactionRetryService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [transactions_service_1.TransactionsService])
+], TransactionRetryService);
 //# sourceMappingURL=transaction-retry.service.js.map

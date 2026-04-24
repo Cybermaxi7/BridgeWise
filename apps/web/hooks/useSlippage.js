@@ -9,7 +9,7 @@ function useSlippage(route, transferAmount, warningThreshold = exports.SLIPPAGE_
     return (0, react_1.useMemo)(() => {
         const defaultResult = {
             slippagePercent: 0,
-            minimumReceived: "0",
+            minimumReceived: '0',
             isHighSlippage: false,
             isLowLiquidity: false,
             hasWarning: false,

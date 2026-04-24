@@ -4,6 +4,9 @@
  *
  * These examples show how to properly import BridgeWise components
  * in Next.js applications to avoid SSR issues.
+ *
+ * For production use, prefer the canonical lazy exports:
+ *   import { LazyBridgeCompare, LazyBridgeStatus } from '../components/lazy';
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -42,25 +45,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SafeBridgeCompare = exports.BridgePage = exports.BridgeQuotesHookExample = exports.TransactionHeartbeatDynamic = exports.BridgeCompareWithLoading = exports.BridgeCompareDynamic = void 0;
+exports.SafeBridgeCompare = exports.BridgePage = exports.BridgeQuotesHookExample = exports.TransactionHeartbeatDynamic = exports.BridgeStatusDynamic = exports.BridgeCompareDynamic = void 0;
 exports.default = BridgePageRoute;
 const dynamic_1 = __importDefault(require("next/dynamic"));
+const QuoteSkeleton_1 = require("../components/ui-lib/skeleton/QuoteSkeleton");
+const BridgeStatusSkeleton_1 = require("../components/ui-lib/skeleton/BridgeStatusSkeleton");
 // Example 1: Dynamic import with SSR disabled (Recommended)
 exports.BridgeCompareDynamic = (0, dynamic_1.default)(() => Promise.resolve().then(() => __importStar(require('../components/BridgeCompare'))).then(mod => mod.BridgeCompare), {
     ssr: false,
-    loading: () => <div>Loading Bridge Compare...</div>
+    loading: () => (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <QuoteSkeleton_1.QuoteSkeleton />
+        <QuoteSkeleton_1.QuoteSkeleton />
+        <QuoteSkeleton_1.QuoteSkeleton />
+      </div>),
 });
-// Example 2: Dynamic import with custom loading component
-exports.BridgeCompareWithLoading = (0, dynamic_1.default)(() => Promise.resolve().then(() => __importStar(require('../components/BridgeCompare'))).then(mod => mod.BridgeCompare), {
+// Example 2: BridgeStatus with skeleton fallback
+exports.BridgeStatusDynamic = (0, dynamic_1.default)(() => Promise.resolve().then(() => __importStar(require('../components/BridgeStatus'))).then(mod => mod.BridgeStatus), {
     ssr: false,
-    loading: () => (<div className="animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-        <div className="space-y-2">
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-        </div>
-      </div>)
+    loading: () => <BridgeStatusSkeleton_1.BridgeStatusSkeleton />,
 });
 // Example 3: Transaction Heartbeat with SSR disabled
 exports.TransactionHeartbeatDynamic = (0, dynamic_1.default)(() => Promise.resolve().then(() => __importStar(require('../components/TransactionHeartbeat'))).then(mod => mod.TransactionHeartbeat), {

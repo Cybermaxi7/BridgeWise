@@ -5,10 +5,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuoteCard = void 0;
 const react_1 = __importDefault(require("react"));
+const ConfidenceScore_1 = require("./bridge/ConfidenceScore");
+const RouteRiskWarning_1 = require("./bridge/RouteRiskWarning");
 const QuoteCard = ({ quote, isSelected, onSelect, isRefreshing = false }) => {
+    const riskBorderClass = !isSelected && quote.failureRisk === 'high'
+        ? 'border-red-300 hover:border-red-400'
+        : !isSelected && quote.failureRisk === 'medium'
+            ? 'border-yellow-300 hover:border-yellow-400'
+            : 'border-gray-200 hover:border-gray-300';
     return (<div className={`bg-white rounded-lg border p-6 shadow-sm transition-all duration-200 hover:shadow-md cursor-pointer ${isSelected
             ? 'border-blue-500 ring-2 ring-blue-200'
-            : 'border-gray-200 hover:border-gray-300'} ${isRefreshing ? 'opacity-75' : ''}`} onClick={onSelect}>
+            : riskBorderClass} ${isRefreshing ? 'opacity-75' : ''}`} onClick={onSelect}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -80,6 +87,16 @@ const QuoteCard = ({ quote, isSelected, onSelect, isRefreshing = false }) => {
           </span>
         </div>
       </div>
+
+      {/* Failure Risk Warning */}
+      {quote.failureRisk && quote.failureRisk !== 'low' && (<div className="mt-3">
+          <RouteRiskWarning_1.RouteRiskWarning failureRisk={quote.failureRisk} riskFactors={quote.riskFactors ?? []}/>
+        </div>)}
+
+      {/* Confidence Score */}
+      {quote.confidenceScore !== undefined && quote.confidenceLevel && (<div className="border-t border-gray-100 pt-3 mt-3">
+          <ConfidenceScore_1.ConfidenceScore score={quote.confidenceScore} level={quote.confidenceLevel}/>
+        </div>)}
 
       {/* Action Button */}
       <div className="mt-4">

@@ -84,6 +84,7 @@ const BridgeStatus = ({ className = '' }) => {
             case 'pending': return 'text-blue-600';
             case 'success': return 'text-green-600';
             case 'failed': return 'text-red-600';
+            case 'partial': return 'text-yellow-600';
             default: return 'text-gray-600';
         }
     };
@@ -92,24 +93,12 @@ const BridgeStatus = ({ className = '' }) => {
             case 'pending': return 'bg-blue-100';
             case 'success': return 'bg-green-100';
             case 'failed': return 'bg-red-100';
+            case 'partial': return 'bg-yellow-100';
             default: return 'bg-gray-100';
         }
     };
-    if (!isMounted || state.status === 'idle') {
+    if (!isMounted) {
         return <BridgeStatusSkeleton_1.BridgeStatusSkeleton className={className}/>;
-    }
-    if (state.status === 'idle') {
-        return (<div className={`bg-white rounded-lg border border-gray-200 p-6 shadow-sm ${className}`}>
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Bridge</h3>
-          <p className="text-gray-600">Select a route to start bridging your assets</p>
-        </div>
-      </div>);
     }
     return (<div className={`bg-white rounded-lg border border-gray-200 p-6 shadow-sm ${className}`}>
       {/* Header */}
@@ -148,6 +137,9 @@ const BridgeStatus = ({ className = '' }) => {
           {state.status === 'failed' && (<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
             </svg>)}
+          {state.status === 'partial' && (<svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>)}
           <div>
             <p className={`font-medium ${getStatusColor(state.status)}`}>
               {state.step}
@@ -156,13 +148,14 @@ const BridgeStatus = ({ className = '' }) => {
               {state.status === 'pending' && 'Please keep this window open'}
               {state.status === 'success' && 'Your assets have been bridged successfully'}
               {state.status === 'failed' && 'Transaction failed. Please try again'}
+              {state.status === 'partial' && 'Part of your transfer completed. See details below.'}
             </p>
           </div>
         </div>
       </div>
 
       {/* Transaction Details */}
-      {(state.status === 'success' || state.status === 'failed') && (<div className="border-t border-gray-100 pt-4">
+      {(state.status === 'success' || state.status === 'failed' || state.status === 'partial') && (<div className="border-t border-gray-100 pt-4">
           <button onClick={() => setShowDetails(!showDetails)} className="flex items-center justify-between w-full text-left mb-4 hover:text-gray-700 transition-colors">
             <span className="font-medium text-gray-900">Transaction Details</span>
             <svg className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,6 +186,26 @@ const BridgeStatus = ({ className = '' }) => {
                   {new Date(state.timestamp).toLocaleString()}
                 </span>
               </div>
+              {state.status === 'partial' && state.partialInfo && (<>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Original Amount</span>
+                    <span className="font-mono text-gray-900">{state.partialInfo.originalAmount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Completed</span>
+                    <span className="font-mono text-green-600">{state.partialInfo.completedAmount} ({state.partialInfo.completedPercentage.toFixed(1)}%)</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Failed</span>
+                    <span className="font-mono text-red-600">{state.partialInfo.failedAmount}</span>
+                  </div>
+                  {state.partialInfo.failedSteps.length > 0 && (<div className="mt-2">
+                      <span className="text-sm text-gray-600">Failed Steps:</span>
+                      <ul className="list-disc list-inside text-sm text-red-600 mt-1">
+                        {state.partialInfo.failedSteps.map((step, idx) => (<li key={idx}>{step}</li>))}
+                      </ul>
+                    </div>)}
+                </>)}
             </div>)}
         </div>)}
 
@@ -211,6 +224,21 @@ const BridgeStatus = ({ className = '' }) => {
                 });
             }} className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
               Try Again
+            </button>
+          </>)}
+        {state.status === 'partial' && (<>
+            <button onClick={clearState} className="flex-1 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+              Dismiss
+            </button>
+            <button onClick={() => {
+                // Retry failed steps
+                updateState({
+                    status: 'pending',
+                    progress: 0,
+                    step: 'Retrying failed steps...'
+                });
+            }} className="flex-1 py-2 px-4 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium">
+              Retry Failed Steps
             </button>
           </>)}
         {state.status === 'success' && (<>

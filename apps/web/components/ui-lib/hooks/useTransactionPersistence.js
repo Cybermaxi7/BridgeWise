@@ -1,9 +1,35 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.useTransactionPersistence = void 0;
+exports.useTransactionPersistence = exports.updatePartialTransfer = exports.createPartialTransferInfo = void 0;
 const react_1 = require("react");
 const ssr_1 = require("../utils/ssr");
 const STORAGE_KEY = 'bridgewise_tx_state';
+const createPartialTransferInfo = (originalAmount, completedAmount, failedSteps, succeededSteps) => {
+    const original = parseFloat(originalAmount || '0');
+    const completed = parseFloat(completedAmount || '0');
+    const failed = original - completed;
+    return {
+        originalAmount,
+        completedAmount,
+        failedAmount: failed.toString(),
+        completedPercentage: original > 0 ? (completed / original) * 100 : 0,
+        failedSteps,
+        succeededSteps,
+    };
+};
+exports.createPartialTransferInfo = createPartialTransferInfo;
+const updatePartialTransfer = (prev, newCompletedAmount, step, failed) => {
+    if (!prev.partialInfo) {
+        return undefined;
+    }
+    const original = parseFloat(prev.partialInfo.originalAmount);
+    const currentCompleted = parseFloat(prev.partialInfo.completedAmount);
+    const newCompleted = failed ? currentCompleted : currentCompleted + parseFloat(newCompletedAmount);
+    const failedSteps = failed ? [...prev.partialInfo.failedSteps, step] : prev.partialInfo.failedSteps;
+    const succeededSteps = !failed ? [...prev.partialInfo.succeededSteps, step] : prev.partialInfo.succeededSteps;
+    return (0, exports.createPartialTransferInfo)(prev.partialInfo.originalAmount, newCompleted.toString(), failedSteps, succeededSteps);
+};
+exports.updatePartialTransfer = updatePartialTransfer;
 const useTransactionPersistence = () => {
     const [state, setState] = (0, react_1.useState)({
         id: '',
@@ -56,20 +82,105 @@ const useTransactionPersistence = () => {
         });
         ssr_1.ssrLocalStorage.removeItem(STORAGE_KEY);
     }, []);
-    const startTransaction = (0, react_1.useCallback)((id) => {
+    const startTransaction = (0, react_1.useCallback)((id, originalAmount) => {
+        const partialInfo = originalAmount
+            ? (0, exports.createPartialTransferInfo)(originalAmount, '0', [], [])
+            : undefined;
         setState({
             id,
             status: 'pending',
             progress: 0,
             step: 'Initializing...',
             timestamp: Date.now(),
+            partialInfo,
         });
+    }, []);
+    const markPartialSuccess = (0, react_1.useCallback)((completedAmount, step) => {
+        setState((prev) => {
+            if (!prev.partialInfo)
+                return prev;
+            const newPartialInfo = (0, exports.updatePartialTransfer)(prev, completedAmount, step, false);
+            return {
+                ...prev,
+                status: 'partial',
+                partialInfo: newPartialInfo,
+                timestamp: Date.now(),
+            };
+        });
+    }, []);
+    const markPartialFailure = (0, react_1.useCallback)((step) => {
+        setState((prev) => {
+            if (!prev.partialInfo)
+                return prev;
+            const newPartialInfo = (0, exports.updatePartialTransfer)(prev, '0', step, true);
+            return {
+                ...prev,
+                status: 'partial',
+                partialInfo: newPartialInfo,
+                timestamp: Date.now(),
+            };
+        });
+    }, []);
+    const startRetry = (0, react_1.useCallback)((maxRetries = 3, backoffMs = 1000) => {
+        setState((prev) => ({
+            ...prev,
+            retryInfo: {
+                isRetrying: true,
+                retryCount: (prev.retryInfo?.retryCount || 0) + 1,
+                maxRetries,
+                attempts: prev.retryInfo?.attempts || [],
+                nextRetryAt: undefined,
+            },
+            status: 'pending',
+            step: `Retrying... (Attempt ${(prev.retryInfo?.retryCount || 0) + 1}/${maxRetries})`,
+            timestamp: Date.now(),
+        }));
+    }, []);
+    const logRetryAttempt = (0, react_1.useCallback)((error) => {
+        setState((prev) => {
+            if (!prev.retryInfo)
+                return prev;
+            const newAttempts = [
+                ...prev.retryInfo.attempts,
+                {
+                    attempt: prev.retryInfo.retryCount,
+                    timestamp: Date.now(),
+                    error,
+                },
+            ];
+            return {
+                ...prev,
+                retryInfo: {
+                    ...prev.retryInfo,
+                    isRetrying: false,
+                    attempts: newAttempts,
+                },
+                timestamp: Date.now(),
+            };
+        });
+    }, []);
+    const markRetrySuccess = (0, react_1.useCallback)(() => {
+        setState((prev) => ({
+            ...prev,
+            status: 'success',
+            retryInfo: prev.retryInfo ? {
+                ...prev.retryInfo,
+                isRetrying: false,
+            } : undefined,
+            step: 'Transaction completed successfully',
+            timestamp: Date.now(),
+        }));
     }, []);
     return {
         state,
         updateState,
         clearState,
         startTransaction,
+        markPartialSuccess,
+        markPartialFailure,
+        startRetry,
+        logRetryAttempt,
+        markRetrySuccess,
     };
 };
 exports.useTransactionPersistence = useTransactionPersistence;

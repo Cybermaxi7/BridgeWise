@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const bridge_core_1 = require("../../../libs/bridge-core/src");
+const bridge_core_1 = require("@bridgewise/bridge-core");
 const stellarProvider = {
     name: 'Stellar',
     apiUrl: 'https://stellar-bridge.example.com/api',

@@ -4,10 +4,15 @@ const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const request_id_middleware_1 = require("./common/middleware/request-id.middleware");
+const rate_limit_1 = require("./middleware/rate-limit");
 const app_module_1 = require("./app.module");
 const config_service_1 = require("./config/config.service");
+const logger_service_1 = require("./logger/logger.service");
 async function bootstrap() {
-    const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const app = await core_1.NestFactory.create(app_module_1.AppModule, {
+        bufferLogs: true,
+    });
+    app.useLogger(app.get(logger_service_1.BridgeWiseLogger));
     const configService = app.get(config_service_1.ConfigService);
     // ===== CONFIGURE SWAGGER/OPENAPI =====
     const config = new swagger_1.DocumentBuilder()
@@ -47,8 +52,6 @@ async function bootstrap() {
         // Use 400 for validation errors
         errorHttpStatusCode: 400,
     }));
-
-      app.useGlobalFilters(new GlobalExceptionFilter());
     // ===== ENABLE CORS =====
     const corsOrigin = configService.get('CORS_ORIGIN');
     app.enableCors({
@@ -59,6 +62,12 @@ async function bootstrap() {
     // ===== REQUEST ID MIDDLEWARE =====
     // Use dedicated RequestIdMiddleware to set req.id and response header
     app.use((req, res, next) => new request_id_middleware_1.RequestIdMiddleware().use(req, res, next));
+    // ===== RATE LIMITING MIDDLEWARE =====
+    const rateLimitMiddleware = new rate_limit_1.RateLimitMiddleware({
+        windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000),
+        maxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100),
+    });
+    app.use((req, res, next) => rateLimitMiddleware.use(req, res, next));
     await app.listen(configService.get('server').port);
     console.log(`✅ Application is running on port ${configService.get('server').port}`);
 }

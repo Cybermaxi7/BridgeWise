@@ -39,6 +39,7 @@ const react_1 = __importStar(require("react"));
 const ssr_1 = require("./ui-lib/utils/ssr");
 const RefreshIndicator_1 = require("./RefreshIndicator");
 const QuoteCard_1 = require("./QuoteCard");
+const RouteRiskWarning_1 = require("./bridge/RouteRiskWarning");
 const skeleton_1 = require("./ui-lib/skeleton");
 const sorting_1 = require("./ui-lib/sorting");
 // Mock hook since @bridgewise/react may not be available
@@ -106,6 +107,7 @@ const BridgeCompare = (props) => {
     const [selectedQuoteId, setSelectedQuoteId] = (0, react_1.useState)(null);
     const [showRefreshIndicator, setShowRefreshIndicator] = (0, react_1.useState)(false);
     const [sortBy, setSortBy] = (0, react_1.useState)('recommended');
+    const [userHasSelected, setUserHasSelected] = (0, react_1.useState)(false);
     const { quotes, isLoading, error, lastRefreshed, isRefreshing, refresh, updateParams, retryCount } = useBridgeQuotes({
         initialParams,
         intervalMs: refreshInterval,
@@ -121,6 +123,7 @@ const BridgeCompare = (props) => {
     const handleQuoteSelect = (quoteId) => {
         if (isMounted) {
             setSelectedQuoteId(quoteId);
+            setUserHasSelected(true); // Mark that user has manually selected
             onQuoteSelect?.(quoteId);
         }
     };
@@ -130,6 +133,21 @@ const BridgeCompare = (props) => {
     };
     // Apply sorting to quotes
     const sortedQuotes = quotes.length > 0 ? (0, sorting_1.sortQuotes)((0, sorting_1.enhanceQuotesForSorting)(quotes), sortBy) : quotes;
+    // Derive failure risk for the currently selected route
+    const selectedQuote = sortedQuotes.find((q) => q.id === selectedQuoteId);
+    const selectedRisk = selectedQuote?.failureRisk;
+    const selectedRiskFactors = selectedQuote?.riskFactors ?? [];
+    // Auto-select top-ranked route when quotes load or refresh
+    // Only auto-select if user hasn't manually chosen a route
+    (0, react_1.useEffect)(() => {
+        if (sortedQuotes.length > 0 && !userHasSelected && isMounted) {
+            const topRankedQuote = sortedQuotes[0];
+            if (topRankedQuote && topRankedQuote.id !== selectedQuoteId) {
+                setSelectedQuoteId(topRankedQuote.id);
+                onQuoteSelect?.(topRankedQuote.id);
+            }
+        }
+    }, [sortedQuotes, userHasSelected, isMounted, selectedQuoteId, onQuoteSelect]);
     // Format last refreshed time
     const getLastRefreshedText = () => {
         if (!lastRefreshed)
@@ -162,6 +180,11 @@ const BridgeCompare = (props) => {
           </div>
         </div>
       </div>
+
+      {/* Selected route risk warning */}
+      {selectedRisk && selectedRisk !== 'low' && (<div className="mb-4">
+          <RouteRiskWarning_1.RouteRiskWarning failureRisk={selectedRisk} riskFactors={selectedRiskFactors}/>
+        </div>)}
 
       {/* Error state */}
       {error && (<div className="bridge-compare__error" role="alert">

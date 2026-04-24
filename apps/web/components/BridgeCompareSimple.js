@@ -211,6 +211,7 @@ const BridgeCompareSimple = (props) => {
     const [sortBy, setSortBy] = (0, react_1.useState)('recommended');
     const [isLoading, setIsLoading] = (0, react_1.useState)(false);
     const [isRefreshing, setIsRefreshing] = (0, react_1.useState)(false);
+    const [userHasSelected, setUserHasSelected] = (0, react_1.useState)(false);
     // Mock quotes data
     const mockQuotes = [
         {
@@ -298,9 +299,21 @@ const BridgeCompareSimple = (props) => {
     const handleQuoteSelect = (quoteId) => {
         if (isMounted) {
             setSelectedQuoteId(quoteId);
+            setUserHasSelected(true); // Mark that user has manually selected
             onQuoteSelect?.(quoteId);
         }
     };
+    // Auto-select top-ranked route when quotes load or refresh
+    // Only auto-select if user hasn't manually chosen a route
+    (0, react_1.useEffect)(() => {
+        if (sortedQuotes.length > 0 && !userHasSelected && isMounted) {
+            const topRankedQuote = sortedQuotes[0];
+            if (topRankedQuote && topRankedQuote.id !== selectedQuoteId) {
+                setSelectedQuoteId(topRankedQuote.id);
+                onQuoteSelect?.(topRankedQuote.id);
+            }
+        }
+    }, [sortedQuotes, userHasSelected, isMounted, selectedQuoteId, onQuoteSelect]);
     // Handle sort change
     const handleSortChange = (newSortBy) => {
         setSortBy(newSortBy);

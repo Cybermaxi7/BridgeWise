@@ -1,7 +1,7 @@
 "use strict";
 // Module
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WebSocketBridgeAdapter = exports.HttpBridgeAdapter = exports.BridgeCapabilityNotFoundException = exports.BridgeLoadException = exports.BridgeInitializationException = exports.BridgeDuplicateException = exports.BridgeNotFoundException = exports.BRIDGE_REGISTRY_TOKEN = exports.BRIDGE_ADAPTER_TOKEN = exports.BRIDGE_MODULE_CONFIG = exports.BRIDGE_ADAPTER_METADATA = exports.InjectBridgeRegistry = exports.BridgePlugin = exports.BridgeService = void 0;
+exports.DemoBridgeAdapter = exports.WebSocketBridgeAdapter = exports.HttpBridgeAdapter = exports.BridgeCapabilityNotFoundException = exports.BridgeLoadException = exports.BridgeInitializationException = exports.BridgeDuplicateException = exports.BridgeNotFoundException = exports.BRIDGE_REGISTRY_TOKEN = exports.BRIDGE_ADAPTER_TOKEN = exports.BRIDGE_MODULE_CONFIG = exports.BRIDGE_ADAPTER_METADATA = exports.InjectBridgeRegistry = exports.BridgePlugin = exports.BridgeService = void 0;
 // Services
 var bridge_service_1 = require("./bridge.service");
 Object.defineProperty(exports, "BridgeService", { enumerable: true, get: function () { return bridge_service_1.BridgeService; } });
@@ -27,4 +27,6 @@ var http_bridge_adapter_1 = require("./http-bridge.adapter");
 Object.defineProperty(exports, "HttpBridgeAdapter", { enumerable: true, get: function () { return http_bridge_adapter_1.HttpBridgeAdapter; } });
 var websocket_bridge_adapter_1 = require("./websocket-bridge.adapter");
 Object.defineProperty(exports, "WebSocketBridgeAdapter", { enumerable: true, get: function () { return websocket_bridge_adapter_1.WebSocketBridgeAdapter; } });
+var demo_bridge_adapter_1 = require("./demo-bridge.adapter");
+Object.defineProperty(exports, "DemoBridgeAdapter", { enumerable: true, get: function () { return demo_bridge_adapter_1.DemoBridgeAdapter; } });
 //# sourceMappingURL=index.js.map

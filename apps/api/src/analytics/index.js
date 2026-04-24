@@ -6,7 +6,7 @@
  * Includes data collection, aggregation, API endpoints, and React hooks.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateBridgeAnalytics1700000000000 = exports.UserActivityInsightsDto = exports.SlippageStatisticsDto = exports.TopPerformingBridgesDto = exports.TimeSeriesAnalyticsDto = exports.TimeSeriesDataPointDto = exports.RouteAnalyticsDto = exports.BridgeAnalyticsResponseDto = exports.BridgeAnalyticsQueryDto = exports.BridgeAnalytics = exports.AnalyticsController = exports.AnalyticsCollector = exports.AnalyticsService = exports.AnalyticsModule = void 0;
+exports.CreateBridgeAnalytics1700000000000 = exports.computeSuccessRate = exports.computeProviderScore = exports.UserActivityInsightsDto = exports.SlippageStatisticsDto = exports.TopPerformingBridgesDto = exports.TimeSeriesAnalyticsDto = exports.TimeSeriesDataPointDto = exports.RouteAnalyticsDto = exports.BridgeAnalyticsResponseDto = exports.BridgeAnalyticsQueryDto = exports.BridgeAnalytics = exports.AnalyticsController = exports.AnalyticsCollector = exports.AnalyticsService = exports.AnalyticsModule = void 0;
 // Module
 var analytics_module_1 = require("./analytics.module");
 Object.defineProperty(exports, "AnalyticsModule", { enumerable: true, get: function () { return analytics_module_1.AnalyticsModule; } });
@@ -31,6 +31,9 @@ Object.defineProperty(exports, "TimeSeriesAnalyticsDto", { enumerable: true, get
 Object.defineProperty(exports, "TopPerformingBridgesDto", { enumerable: true, get: function () { return bridge_analytics_dto_1.TopPerformingBridgesDto; } });
 Object.defineProperty(exports, "SlippageStatisticsDto", { enumerable: true, get: function () { return bridge_analytics_dto_1.SlippageStatisticsDto; } });
 Object.defineProperty(exports, "UserActivityInsightsDto", { enumerable: true, get: function () { return bridge_analytics_dto_1.UserActivityInsightsDto; } });
+var provider_score_1 = require("./provider-score");
+Object.defineProperty(exports, "computeProviderScore", { enumerable: true, get: function () { return provider_score_1.computeProviderScore; } });
+Object.defineProperty(exports, "computeSuccessRate", { enumerable: true, get: function () { return provider_score_1.computeSuccessRate; } });
 // Migration
 var _1700000000000_CreateBridgeAnalytics_1 = require("./migrations/1700000000000-CreateBridgeAnalytics");
 Object.defineProperty(exports, "CreateBridgeAnalytics1700000000000", { enumerable: true, get: function () { return _1700000000000_CreateBridgeAnalytics_1.CreateBridgeAnalytics1700000000000; } });

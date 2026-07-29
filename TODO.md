@@ -7,3 +7,4 @@
 - [ ] Verify simulator acceptance criteria: provider outage simulation + failover validation.
 - [ ] Run full test suite, ensure clean pass.
 
+<!-- ## Stellar/Soroban Features - All Issues Implemented -->

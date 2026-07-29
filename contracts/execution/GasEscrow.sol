@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {SafeNativeTransfer} from "../utils/SafeNativeTransfer.sol";
+
 /// @title GasEscrow
 /// @notice Destination execution gas escrow module holding gas stipends and refunding unused gas.
 contract GasEscrow {
@@ -35,8 +37,7 @@ contract GasEscrow {
         if (msg.value > executionCost) {
             refundAmount = msg.value - executionCost;
             if (refundAmount > 0 && refundAddress != address(0)) {
-                (bool refundSuccess, ) = refundAddress.call{value: refundAmount}("");
-                require(refundSuccess, "Refund transfer failed");
+                SafeNativeTransfer.safeTransferNative(refundAddress, refundAmount);
             }
         } else {
             refundAmount = 0;

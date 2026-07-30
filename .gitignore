@@ -55,3 +55,7 @@ libs/bridge-core/node_modules
 secrets/
 credentials/
 *.secretpackages/sdk/metrics/node_modules
+
+# Cargo / Rust
+/target
+

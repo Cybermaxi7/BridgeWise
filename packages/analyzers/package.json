@@ -10,7 +10,13 @@
     "test": "jest",
     "lint": "eslint \"src/**/*.ts\" --fix"
   },
-  "keywords": ["bridge", "cross-chain", "security", "exploit", "detection"],
+  "keywords": [
+    "bridge",
+    "cross-chain",
+    "security",
+    "exploit",
+    "detection"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {},

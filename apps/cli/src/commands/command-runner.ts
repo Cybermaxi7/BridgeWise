@@ -5,6 +5,7 @@ import { CongestionCommand } from './congestion.command';
 import { CompareCommand } from './compare.command';
 import { StatusCommand } from './status.command';
 import { HelpCommand } from './help.command';
+import { InvariantsCommand } from './invariants.command';
 
 @Injectable()
 export class CommandRunner {
@@ -17,6 +18,7 @@ export class CommandRunner {
     private readonly compareCommand: CompareCommand,
     private readonly statusCommand: StatusCommand,
     private readonly helpCommand: HelpCommand,
+    private readonly invariantsCommand: InvariantsCommand,
   ) {}
 
   onModuleInit() {
@@ -27,6 +29,7 @@ export class CommandRunner {
       this.compareCommand,
       this.statusCommand,
       this.helpCommand,
+      this.invariantsCommand,
     ]);
 
     const definitions = Array.from(this.commandMap.values())

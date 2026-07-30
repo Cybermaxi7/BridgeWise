@@ -4,6 +4,7 @@ import { CongestionCommand } from './congestion.command';
 import { CompareCommand } from './compare.command';
 import { StatusCommand } from './status.command';
 import { HelpCommand } from './help.command';
+import { InvariantsCommand } from './invariants.command';
 import { CommandRunner } from './command-runner';
 
 declare const require: any;
@@ -23,6 +24,7 @@ try {
     CompareCommand,
     StatusCommand,
     HelpCommand,
+    InvariantsCommand,
     CommandRunner,
   ],
   exports: [
@@ -32,6 +34,7 @@ try {
     CompareCommand,
     StatusCommand,
     HelpCommand,
+    InvariantsCommand,
     CommandRunner,
   ],
 })

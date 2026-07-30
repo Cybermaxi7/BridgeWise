@@ -1,0 +1,19 @@
+[package]
+name = "bridgewise-rules"
+version = "0.1.0"
+edition = "2021"
+description = "Standalone static-analysis rule checker for BridgeWise Solidity contracts."
+
+# Standalone crate: NOT part of any Cargo workspace, following the same
+# convention as contracts/soroban/*/Cargo.toml in this repo.
+
+[[bin]]
+name = "bridgewise-rules"
+path = "src/main.rs"
+
+[lib]
+name = "bridgewise_rules"
+path = "src/lib.rs"
+
+[dependencies]
+solang-parser = "0.3"

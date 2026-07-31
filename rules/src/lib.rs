@@ -1,14 +1,9 @@
-//! `bridgewise-rules` — a standalone static-analysis rule checker for
-//! BridgeWise Solidity contracts.
+//! BridgeWise Solidity static-analysis rules.
 //!
-//! This crate is intentionally NOT part of any Cargo workspace, mirroring
-//! the standalone-crate convention already used by `contracts/soroban/*` in
-//! this repository. It's purely a source-analysis tool over `.sol` files
-//! and has nothing to do with the Soroban Rust contracts.
-//!
-//! Each rule lives in its own module, exposing a testable
-//! `check_source(&str) -> Result<Vec<Violation>, String>` entrypoint (and a
-//! `check_file` convenience wrapper). See [`b011_address_format`] for the
-//! first rule implemented here.
+//! This is a standalone Rust crate (not part of any Cargo workspace,
+//! matching the repo's existing convention of self-contained crates under
+//! `contracts/soroban/*`). Each rule lives in its own module; the CLI in
+//! `src/main.rs` runs a rule against a `.sol` file passed on the command
+//! line.
 
-pub mod b011_address_format;
+pub mod b001_chain_id_check;

@@ -1,58 +1,46 @@
-//! CLI entrypoint for `bridgewise-rules`.
+//! CLI entrypoint: run rule B001 against a Solidity file passed as the
+//! first argument.
 //!
-//! Usage:
-//!   bridgewise-rules <path-to.sol> [<path-to.sol> ...]
-//!
-//! Runs every implemented rule (currently just B011) against each given
-//! Solidity file and prints any violations found. Exits with a non-zero
-//! status if any violations were found in any file, or if a file failed to
-//! parse.
+//! Usage: `rules <path-to-file.sol>`
 
-use bridgewise_rules::b011_address_format;
-use std::path::PathBuf;
+use std::env;
+use std::fs;
 use std::process::ExitCode;
 
+use rules::b001_chain_id_check::check_source;
+
 fn main() -> ExitCode {
-    let paths: Vec<PathBuf> = std::env::args().skip(1).map(PathBuf::from).collect();
+    let args: Vec<String> = env::args().collect();
+    let program = args.first().map(String::as_str).unwrap_or("rules");
 
-    if paths.is_empty() {
-        eprintln!("usage: bridgewise-rules <path-to.sol> [<path-to.sol> ...]");
+    let Some(path) = args.get(1) else {
+        eprintln!("Usage: {program} <path-to-.sol-file>");
         return ExitCode::FAILURE;
-    }
+    };
 
-    let mut had_findings = false;
-
-    for path in &paths {
-        match b011_address_format::check_file(path) {
-            Ok(violations) => {
-                if violations.is_empty() {
-                    println!("{}: OK (B011)", path.display());
-                } else {
-                    had_findings = true;
-                    for v in &violations {
-                        let loc = v
-                            .line
-                            .map(|l| format!(":{l}"))
-                            .unwrap_or_default();
-                        println!(
-                            "{}{}: [B011] {}",
-                            path.display(),
-                            loc,
-                            v.message
-                        );
-                    }
-                }
-            }
-            Err(e) => {
-                had_findings = true;
-                eprintln!("{}: error: {e}", path.display());
-            }
+    let source = match fs::read_to_string(path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to read {path}: {e}");
+            return ExitCode::FAILURE;
         }
-    }
+    };
 
-    if had_findings {
-        ExitCode::FAILURE
-    } else {
-        ExitCode::SUCCESS
+    match check_source(&source) {
+        Ok(violations) if violations.is_empty() => {
+            println!("B001: no violations found in {path}");
+            ExitCode::SUCCESS
+        }
+        Ok(violations) => {
+            println!("B001: {} violation(s) found in {path}:", violations.len());
+            for v in &violations {
+                println!("  {path}:{} [{}] {}", v.line, v.function_name, v.message);
+            }
+            ExitCode::FAILURE
+        }
+        Err(e) => {
+            eprintln!("Failed to parse {path}: {e}");
+            ExitCode::FAILURE
+        }
     }
 }

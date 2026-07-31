@@ -5,6 +5,7 @@ import { CongestionCommand } from './commands/congestion.command';
 import { CompareCommand } from './commands/compare.command';
 import { StatusCommand } from './commands/status.command';
 import { HelpCommand } from './commands/help.command';
+import { InvariantsCommand } from './commands/invariants.command';
 import { CommandRunner } from './commands/command-runner';
 
 declare const process: { argv: string[]; exit(code?: number): void };
@@ -18,6 +19,7 @@ async function bootstrap(): Promise<string> {
   const compareCommand = new CompareCommand();
   const statusCommand = new StatusCommand();
   const helpCommand = new HelpCommand();
+  const invariantsCommand = new InvariantsCommand();
 
   const runner = new CommandRunner(
     historyCommand,
@@ -26,6 +28,7 @@ async function bootstrap(): Promise<string> {
     compareCommand,
     statusCommand,
     helpCommand,
+    invariantsCommand,
   );
   runner.onModuleInit();
 

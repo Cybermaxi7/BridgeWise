@@ -1,7 +1,7 @@
 # Stellar/Soroban Features Implementation Summary
 
 This document summarizes the implementation of four critical Stellar/Soroban bridge features for BridgeWise.
-
+<!-- ## Stellar/Soroban Features - All Issues Implemented -->
 ---
 
 ## Issue #352: Soroban Cross-Chain Settlement Verifier

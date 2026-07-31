@@ -65,3 +65,7 @@ types/
 secrets/
 credentials/
 *.secretpackages/sdk/metrics/node_modules
+
+# Cargo / Rust
+/target
+

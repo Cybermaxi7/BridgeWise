@@ -97,6 +97,9 @@
       "jsx"
     ],
     "rootDir": ".",
+    "testPathIgnorePatterns": [
+      "test/config/"
+    ],
     "testRegex": ".*\\.(test|spec)\\.(ts|tsx|js|jsx)$",
     "transform": {
       "^.+\\.(t|j)sx?$": [

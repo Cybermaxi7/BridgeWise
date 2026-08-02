@@ -6,6 +6,7 @@ import { CompareCommand } from '../compare.command';
 import { StatusCommand } from '../status.command';
 import { HelpCommand } from '../help.command';
 import { CheckInvariantsCommand } from '../check-invariants.command';
+import { InvariantsCommand } from '../invariants.command';
 
 describe('CommandRunner', () => {
   let runner: CommandRunner;
@@ -18,6 +19,7 @@ describe('CommandRunner', () => {
     const statusCommand = new StatusCommand();
     const helpCommand = new HelpCommand();
     const checkInvariantsCommand = new CheckInvariantsCommand();
+    const invariantsCommand = new InvariantsCommand();
 
     runner = new CommandRunner(
       historyCommand,
@@ -27,6 +29,7 @@ describe('CommandRunner', () => {
       statusCommand,
       helpCommand,
       checkInvariantsCommand,
+      invariantsCommand,
     );
     runner.onModuleInit();
   });

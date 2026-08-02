@@ -6,6 +6,7 @@ import { CompareCommand } from './commands/compare.command';
 import { StatusCommand } from './commands/status.command';
 import { HelpCommand } from './commands/help.command';
 import { CheckInvariantsCommand } from './commands/check-invariants.command';
+import { InvariantsCommand } from './commands/invariants.command';
 import { CommandRunner } from './commands/command-runner';
 
 declare const process: { argv: string[]; exit(code?: number): void };
@@ -20,6 +21,7 @@ async function bootstrap(): Promise<string> {
   const statusCommand = new StatusCommand();
   const helpCommand = new HelpCommand();
   const checkInvariantsCommand = new CheckInvariantsCommand();
+  const invariantsCommand = new InvariantsCommand();
 
   const runner = new CommandRunner(
     historyCommand,
@@ -29,6 +31,7 @@ async function bootstrap(): Promise<string> {
     statusCommand,
     helpCommand,
     checkInvariantsCommand,
+    invariantsCommand,
   );
   runner.onModuleInit();
 

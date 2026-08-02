@@ -6,6 +6,7 @@ import { StatusCommand } from '../status.command';
 import { CommandRunner } from '../command-runner';
 import { HelpCommand } from '../help.command';
 import { CheckInvariantsCommand } from '../check-invariants.command';
+import { InvariantsCommand } from '../invariants.command';
 
 declare const process: { exit(code?: number): void };
 
@@ -93,6 +94,7 @@ async function runAllTests() {
       new StatusCommand(),
       new HelpCommand(),
       new CheckInvariantsCommand(),
+      new InvariantsCommand(),
     );
     runner.onModuleInit();
 

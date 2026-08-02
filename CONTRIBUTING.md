@@ -4,7 +4,7 @@ First off, thank you for your interest in contributing to BridgeWise 🚀
 This project is actively evolving, and we welcome high-quality contributions that improve stability, scalability, and developer experience.
 
 ---
-
+<!-- ## Stellar/Soroban Features - All Issues Implemented -->
 ## 🧭 Project Structure
 
 This repository follows a **monorepo architecture**:

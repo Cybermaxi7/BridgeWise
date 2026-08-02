@@ -5,6 +5,7 @@ import { CongestionCommand } from '../congestion.command';
 import { CompareCommand } from '../compare.command';
 import { StatusCommand } from '../status.command';
 import { HelpCommand } from '../help.command';
+import { CheckInvariantsCommand } from '../check-invariants.command';
 import { InvariantsCommand } from '../invariants.command';
 
 describe('CommandRunner', () => {
@@ -17,6 +18,7 @@ describe('CommandRunner', () => {
     const compareCommand = new CompareCommand();
     const statusCommand = new StatusCommand();
     const helpCommand = new HelpCommand();
+    const checkInvariantsCommand = new CheckInvariantsCommand();
     const invariantsCommand = new InvariantsCommand();
 
     runner = new CommandRunner(
@@ -26,6 +28,7 @@ describe('CommandRunner', () => {
       compareCommand,
       statusCommand,
       helpCommand,
+      checkInvariantsCommand,
       invariantsCommand,
     );
     runner.onModuleInit();

@@ -4,6 +4,7 @@ import { CongestionCommand } from './congestion.command';
 import { CompareCommand } from './compare.command';
 import { StatusCommand } from './status.command';
 import { HelpCommand } from './help.command';
+import { CheckInvariantsCommand } from './check-invariants.command';
 import { InvariantsCommand } from './invariants.command';
 import { CommandRunner } from './command-runner';
 
@@ -24,6 +25,7 @@ try {
     CompareCommand,
     StatusCommand,
     HelpCommand,
+    CheckInvariantsCommand,
     InvariantsCommand,
     CommandRunner,
   ],
@@ -34,6 +36,7 @@ try {
     CompareCommand,
     StatusCommand,
     HelpCommand,
+    CheckInvariantsCommand,
     InvariantsCommand,
     CommandRunner,
   ],
